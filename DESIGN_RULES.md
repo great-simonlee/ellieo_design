@@ -51,6 +51,17 @@ npm run ios
 
 That runs `expo start --ios`, installs/opens the dev client in the simulator, and loads the app.
 
+**If the simulator does not open or the terminal sits on “Starting Metro Bundler”**
+
+After that line, Expo may still run TypeScript checks and **fetch dependency metadata over the network** before it launches Simulator and opens **Expo Go**. That can take a minute on a slow or blocked network and looks like a hang.
+
+1. Wait up to **1–2 minutes** on first run.
+2. **See where it stalls:** run `EXPO_DEBUG=1 npm run ios` and note the **last** log line before it stops.
+3. **Offline / flaky network:** try `npm run ios:offline` (skips some network steps).
+4. **LAN issues:** try `npm run ios:localhost` (uses `localhost` instead of your LAN IP).
+5. **Watchman (Metro stuck forever):** install with `brew install watchman`, stop Expo, run `npm run ios` again.
+6. **Manual sequence:** `open -a Simulator`, wait until a device boots, then `npm start` and press **`i`** when the dev menu appears.
+
 **Alternative:** interactive dev menu
 
 ```bash
@@ -65,6 +76,11 @@ Then press **`i`** for iOS simulator, **`a`** for Android emulator, or scan the 
 npm run web
 ```
 
+## Brand & theme (source of truth)
+
+- **Main / primary color:** `#2F6DF6` — use for key actions, links, selection states, and brand accents unless a screen spec says otherwise.
+- Mirror this in code via `design/theme.ts` when you add or update UI tokens (keep hex aligned with this file).
+
 ## Git / commits
 
 - Keep commits focused on design-related changes.
@@ -75,7 +91,7 @@ npm run web
 <!-- Add project-specific rules, brand notes, Figma links, font files, etc. -->
 
 - Brand colors (hex):
-  - Primary: _TBD_
-  - Background: _TBD_
+  - Primary (main theme): **`#2F6DF6`**
+  - Secondary / background: _TBD_
 - Typography: _TBD_
 - Spacing scale (e.g. 4 / 8 / 16): _TBD_
