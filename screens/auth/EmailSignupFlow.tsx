@@ -1,13 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ImageBackground,
   Keyboard,
-  KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -21,6 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OnboardingBottomCta } from '../../components/OnboardingBottomCta';
 import { useOnboardingCtaLayout } from '../../design/onboardingCtaLayout';
 import { colors, radius, space, type } from '../../design/theme';
+import { PasswordMustIncludeGrid } from './PasswordMustIncludeGrid';
+import { evaluatePassword } from './passwordStrength';
 
 const ink = '#0f172a';
 /** Matches `PersonalOnboardingScreenSix` school verification sheet. */
@@ -44,47 +41,20 @@ export type EmailSignupFlowProps = {
   onClose: () => void;
   /** Called after the post-verify success message (~2s). */
   onFinished?: () => void;
+  /** Switch to email login modal (design-only). */
+  onSwitchToLogin?: () => void;
+  /** When true, shared `EmailAuthModal` ignores hardware back (verified success sheet). */
+  onHardwareCloseBlockedChange?: (blocked: boolean) => void;
 };
 
 type Step = 'signup' | 'verify' | 'verifiedSuccess';
-
-function evaluatePassword(pw: string) {
-  const lenOk = pw.length >= 10;
-  const upperOk = /[A-Z]/.test(pw);
-  const lowerOk = /[a-z]/.test(pw);
-  const numOk = /\d/.test(pw);
-  const specialOk = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pw);
-  const score =
-    [lenOk, upperOk, lowerOk, numOk, specialOk].filter(Boolean).length;
-  let label = 'Weak';
-  let hue: [string, string] = ['#FB923C', '#EA580C'];
-  if (score >= 5) {
-    label = 'Very Strong';
-    hue = ['#34D399', '#059669'];
-  } else if (score >= 4) {
-    label = 'Strong';
-    hue = ['#86EFAC', '#16A34A'];
-  } else if (score >= 3) {
-    label = 'Fair';
-    hue = ['#FDE047', '#CA8A04'];
-  }
-  return {
-    lenOk,
-    upperOk,
-    lowerOk,
-    numOk,
-    specialOk,
-    score,
-    label,
-    hue,
-    pct: score / 5,
-  };
-}
 
 export function EmailSignupFlow({
   visible,
   onClose,
   onFinished,
+  onSwitchToLogin,
+  onHardwareCloseBlockedChange,
 }: EmailSignupFlowProps) {
   const insets = useSafeAreaInsets();
   const { height: windowH } = useWindowDimensions();
@@ -163,6 +133,14 @@ export function EmailSignupFlow({
   }, [visible]);
 
   useEffect(() => {
+    if (!visible) {
+      onHardwareCloseBlockedChange?.(false);
+      return;
+    }
+    onHardwareCloseBlockedChange?.(step === 'verifiedSuccess');
+  }, [visible, step, onHardwareCloseBlockedChange]);
+
+  useEffect(() => {
     const showEvt =
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvt =
@@ -222,37 +200,27 @@ export function EmailSignupFlow({
     setStep('verifiedSuccess');
   };
 
-  return (
-    <Modal
-      visible={visible}
-      animationType='slide'
-      presentationStyle='fullScreen'
-      onRequestClose={() => {
-        if (step === 'verifiedSuccess') return;
-        onClose();
-      }}
-      statusBarTranslucent
-    >
-      <View style={styles.root}>
-        <StatusBar style='light' />
-        <ImageBackground
-          source={require('../../assets/img/user_banner.png')}
-          style={styles.heroBg}
-          resizeMode='cover'
-        >
-          <BlurView intensity={55} tint='dark' style={StyleSheet.absoluteFill} />
-          <LinearGradient
-            colors={['rgba(15,23,42,0.25)', 'rgba(15,23,42,0.72)']}
-            style={StyleSheet.absoluteFill}
-          />
-        </ImageBackground>
+  const handleSwitchToLogin = () => {
+    Keyboard.dismiss();
+    if (onSwitchToLogin) {
+      onSwitchToLogin();
+    } else {
+      onClose();
+    }
+  };
 
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={
-            Platform.OS === 'ios' ? insets.top + space.md : 0
-          }
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <>
+      <View style={styles.layerFill} pointerEvents='box-none'>
+        <View
+          style={[
+            styles.flex,
+            keyboardInset > 0 ? { paddingBottom: keyboardInset } : null,
+          ]}
         >
           <View
             style={[
@@ -261,15 +229,6 @@ export function EmailSignupFlow({
                 styles.kavInnerDockEnd,
             ]}
           >
-            {keyboardInset > 0 ? (
-              <View
-                pointerEvents='none'
-                style={[
-                  styles.keyboardGapFill,
-                  { height: keyboardInset },
-                ]}
-              />
-            ) : null}
             <View
               style={[
                 styles.sheet,
@@ -380,8 +339,9 @@ export function EmailSignupFlow({
                     ? { paddingBottom: verifyScrollPadBottom }
                     : {
                         paddingBottom:
-                          Math.round(space.md / 2) +
-                          Math.min(keyboardInset * 0.06, 20),
+                          keyboardInset > 0
+                            ? space.sm
+                            : Math.round(space.md / 2),
                       },
                 ]}
                 keyboardShouldPersistTaps='handled'
@@ -452,51 +412,7 @@ export function EmailSignupFlow({
                       </Pressable>
                     </View>
 
-                    <View style={styles.pwExtras} accessibilityLiveRegion='polite'>
-                      <Text style={styles.criteriaHint}>Must include</Text>
-                      <View style={styles.criteriaGrid}>
-                        <View style={styles.criteriaGridRow}>
-                          <View style={styles.criteriaGridCell}>
-                            <CriteriaRow
-                              met={pwMeta.lenOk}
-                              title='10+ characters'
-                              hint='At least 10 characters'
-                            />
-                          </View>
-                          <View style={styles.criteriaGridCell}>
-                            <CriteriaRow
-                              met={pwMeta.upperOk}
-                              title='Uppercase'
-                              hint='One uppercase letter A–Z'
-                            />
-                          </View>
-                        </View>
-                        <View style={styles.criteriaGridRow}>
-                          <View style={styles.criteriaGridCell}>
-                            <CriteriaRow
-                              met={pwMeta.lowerOk}
-                              title='Lowercase'
-                              hint='One lowercase letter a–z'
-                            />
-                          </View>
-                          <View style={styles.criteriaGridCell}>
-                            <CriteriaRow
-                              met={pwMeta.numOk}
-                              title='A number'
-                              hint='One digit 0–9'
-                            />
-                          </View>
-                        </View>
-                        <View style={styles.criteriaGridFullRow}>
-                          <CriteriaRow
-                            met={pwMeta.specialOk}
-                            title='Special character'
-                            hint='One special character such as ! @ #'
-                            fullWidth
-                          />
-                        </View>
-                      </View>
-                    </View>
+                    <PasswordMustIncludeGrid password={password} />
                   </View>
 
                   <View
@@ -548,7 +464,7 @@ export function EmailSignupFlow({
                       Already have an account?{' '}
                       <Text
                         accessibilityRole='link'
-                        onPress={onClose}
+                        onPress={handleSwitchToLogin}
                         style={styles.switchLink}
                       >
                         Sign in
@@ -559,7 +475,9 @@ export function EmailSignupFlow({
                       onPress={openVerify}
                       disabled={!canCreate}
                       padH={0}
-                      safeBottomInset={insets.bottom}
+                      safeBottomInset={
+                        keyboardInset > 0 ? 0 : insets.bottom
+                      }
                       buttonWidth={primaryButtonWidth}
                       dockBottomGap={0}
                       dockPaddingTop={space.sm}
@@ -632,7 +550,9 @@ export function EmailSignupFlow({
                     onPress={finishVerify}
                     disabled={code.length !== OTP_LEN}
                     padH={0}
-                    safeBottomInset={verifyDockBottomInset}
+                    safeBottomInset={
+                      keyboardInset > 0 ? 0 : verifyDockBottomInset
+                    }
                     buttonWidth={primaryButtonWidth}
                     dockBottomGap={0}
                     dockPaddingTop={verifyDockPaddingTop}
@@ -644,16 +564,16 @@ export function EmailSignupFlow({
             </View>
           </View>
           </View>
-        </KeyboardAvoidingView>
-        {step === 'verifiedSuccess' ? (
-          <View
-            pointerEvents='auto'
-            style={[StyleSheet.absoluteFillObject, styles.touchGuardOverlay]}
-            accessible={false}
-          />
-        ) : null}
+        </View>
       </View>
-    </Modal>
+      {step === 'verifiedSuccess' ? (
+        <View
+          pointerEvents='auto'
+          style={[StyleSheet.absoluteFillObject, styles.touchGuardOverlay]}
+          accessible={false}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -671,48 +591,9 @@ function FieldLabel({
   );
 }
 
-function CriteriaRow({
-  met,
-  title,
-  hint,
-  fullWidth,
-}: {
-  met: boolean;
-  title: string;
-  hint: string;
-  fullWidth?: boolean;
-}) {
-  return (
-    <View
-      accessibilityRole='text'
-      accessibilityLabel={`${hint}${met ? ', satisfied' : ', needed'}`}
-      style={[
-        styles.criteriaTile,
-        met && styles.criteriaTileMet,
-        fullWidth && styles.criteriaTileFull,
-      ]}
-    >
-      <View style={[styles.criteriaIcon, met && styles.criteriaIconMet]}>
-        {met ? (
-          <Ionicons name='checkmark' size={11} color='#ffffff' />
-        ) : (
-          <View style={styles.criteriaIconHollow} />
-        )}
-      </View>
-      <Text
-        style={[styles.criteriaTitle, met && styles.criteriaTitleMet]}
-        numberOfLines={2}
-      >
-        {title}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#0f172a',
+  layerFill: {
+    ...StyleSheet.absoluteFillObject,
   },
   /** Blocks all taps while the verified celebration is shown (no dismiss / stray presses). */
   touchGuardOverlay: {
@@ -723,24 +604,12 @@ const styles = StyleSheet.create({
     }),
   },
   flex: { flex: 1 },
-  /** Wraps sheet so a bottom band can match `KeyboardAvoidingView` inset padding (otherwise that strip is transparent and shows the hero). */
   kavInner: {
     flex: 1,
   },
   /** Like `PersonalOnboardingScreenSix` `modalStack` — dock sheet to bottom; height fits content. */
   kavInnerDockEnd: {
     justifyContent: 'flex-end',
-  },
-  keyboardGapFill: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: sheetBg,
-    zIndex: 0,
-  },
-  heroBg: {
-    ...StyleSheet.absoluteFillObject,
   },
   sheet: {
     zIndex: 1,
@@ -891,82 +760,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     paddingHorizontal: space.sm,
-  },
-  pwExtras: {
-    marginTop: space.lg,
-  },
-  criteriaHint: {
-    fontSize: type.micro,
-    fontWeight: '700',
-    color: muted,
-    letterSpacing: 0.15,
-    textTransform: 'uppercase',
-    marginBottom: space.md,
-  },
-  criteriaGrid: {
-    gap: space.sm + 2,
-  },
-  criteriaGridRow: {
-    flexDirection: 'row',
-    gap: space.sm + 2,
-  },
-  criteriaGridFullRow: {
-    width: '100%',
-  },
-  criteriaGridCell: {
-    flex: 1,
-    minWidth: 0,
-  },
-  criteriaTile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: space.sm + 2,
-    paddingHorizontal: space.sm,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: line,
-    backgroundColor: '#F1F5F9',
-    flex: 1,
-    minHeight: 38,
-  },
-  criteriaTileMet: {
-    borderColor: 'rgba(22, 163, 74, 0.35)',
-    backgroundColor: 'rgba(22, 163, 74, 0.06)',
-  },
-  criteriaTileFull: {
-    width: '100%',
-  },
-  criteriaIcon: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#F8FAFC',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  criteriaIconMet: {
-    borderColor: SUCCESS_GREEN,
-    backgroundColor: SUCCESS_GREEN,
-  },
-  criteriaIconHollow: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#E2E8F0',
-  },
-  criteriaTitle: {
-    flex: 1,
-    fontSize: type.micro,
-    lineHeight: 15,
-    fontWeight: '600',
-    color: slate,
-    letterSpacing: -0.1,
-  },
-  criteriaTitleMet: {
-    color: ink,
   },
   errText: {
     fontSize: type.caption,

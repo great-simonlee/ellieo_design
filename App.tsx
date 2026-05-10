@@ -20,7 +20,13 @@ import { PersonalOnboardingScreenTwo } from './screens/PersonalOnboardingScreenT
 import { LoginScreen } from './screens/LoginScreen';
 import { SignupScreen } from './screens/SignupScreen';
 import { WelcomeScreen } from './screens/WelcomeScreen';
+import {
+  EmailAuthModal,
+  type EmailAuthPanel,
+} from './screens/auth/EmailAuthModal';
+import { EmailLoginFlow } from './screens/auth/EmailLoginFlow';
 import { EmailSignupFlow } from './screens/auth/EmailSignupFlow';
+import { ForgotPasswordFlow } from './screens/auth/ForgotPasswordFlow';
 
 type AuthRoute = 'login' | 'signup';
 
@@ -50,8 +56,14 @@ export default function App() {
     useState(false);
   const [agentProfilePhase, setAgentProfilePhase] =
     useState<AgentProfilePhase>('intro');
-  const [showEmailAuthFlow, setShowEmailAuthFlow] = useState(false);
+  const [emailAuthPanel, setEmailAuthPanel] = useState<EmailAuthPanel | null>(
+    null,
+  );
+  const [forgotPrefillEmail, setForgotPrefillEmail] = useState('');
+  const [blockEmailAuthClose, setBlockEmailAuthClose] = useState(false);
   const defaultsPatchedRef = useRef(false);
+
+  const emailAuthOverlayOpen = showAuth && emailAuthPanel !== null;
   const [fontsLoaded] = useFonts({
     Pretendard: require('./assets/fonts/pretendard/Pretendard-Regular.ttf'),
   });
@@ -91,13 +103,21 @@ export default function App() {
       setShowPersonalOnboardingSix(false);
       setShowPersonalOnboardingSeven(false);
       setShowPersonalOnboardingEight(false);
-      setShowExploreHome(false);
+      // Do not call setShowExploreHome(false) here: email login/sign-up sets
+      // showAuth false and showExploreHome true in the same transition; this
+      // effect would immediately clear the map navigation.
       setShowAgentOnboarding(false);
       setShowAgentProfileOnboarding(false);
       setAgentProfilePhase('intro');
-      setShowEmailAuthFlow(false);
+      setEmailAuthPanel(null);
+      setForgotPrefillEmail('');
+      setBlockEmailAuthClose(false);
     }
   }, [showAuth]);
+
+  useEffect(() => {
+    if (!emailAuthOverlayOpen) setBlockEmailAuthClose(false);
+  }, [emailAuthOverlayOpen]);
 
   if (!fontsLoaded) {
     return <LoadingScreen />;
@@ -105,23 +125,81 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <EmailSignupFlow
-        visible={showAuth && showEmailAuthFlow}
-        onClose={() => setShowEmailAuthFlow(false)}
-        onFinished={() => {
-          setShowEmailAuthFlow(false);
-          setShowAgentOnboarding(false);
-          setShowAgentProfileOnboarding(false);
-          setShowPersonalOnboarding(true);
-          setShowPersonalOnboardingTwo(false);
-          setShowPersonalOnboardingThree(false);
-          setShowPersonalOnboardingFour(false);
-          setShowPersonalOnboardingFive(false);
-          setShowPersonalOnboardingSix(false);
-          setShowPersonalOnboardingSeven(false);
-          setShowPersonalOnboardingEight(false);
-          setShowExploreHome(false);
+      <EmailAuthModal
+        visible={emailAuthOverlayOpen}
+        activePanel={emailAuthPanel}
+        onRequestClose={() => {
+          if (blockEmailAuthClose) return;
+          setEmailAuthPanel(null);
+          setForgotPrefillEmail('');
         }}
+        panelSignup={
+          <EmailSignupFlow
+            visible={false}
+            onHardwareCloseBlockedChange={setBlockEmailAuthClose}
+            onClose={() => setEmailAuthPanel(null)}
+            onSwitchToLogin={() => {
+              setAuthRoute('login');
+              setEmailAuthPanel('login');
+            }}
+            onFinished={() => {
+              setEmailAuthPanel(null);
+              setShowAuth(false);
+              setShowAgentOnboarding(false);
+              setShowAgentProfileOnboarding(false);
+              setShowPersonalOnboarding(false);
+              setShowPersonalOnboardingTwo(false);
+              setShowPersonalOnboardingThree(false);
+              setShowPersonalOnboardingFour(false);
+              setShowPersonalOnboardingFive(false);
+              setShowPersonalOnboardingSix(false);
+              setShowPersonalOnboardingSeven(false);
+              setShowPersonalOnboardingEight(false);
+              setShowExploreHome(true);
+            }}
+          />
+        }
+        panelLogin={
+          <EmailLoginFlow
+            visible={false}
+            onClose={() => setEmailAuthPanel(null)}
+            onSwitchToSignup={() => {
+              setAuthRoute('signup');
+              setEmailAuthPanel('signup');
+            }}
+            onLoggedIn={() => {
+              setEmailAuthPanel(null);
+              setShowAuth(false);
+              setShowAgentOnboarding(false);
+              setShowAgentProfileOnboarding(false);
+              setShowPersonalOnboarding(false);
+              setShowPersonalOnboardingTwo(false);
+              setShowPersonalOnboardingThree(false);
+              setShowPersonalOnboardingFour(false);
+              setShowPersonalOnboardingFive(false);
+              setShowPersonalOnboardingSix(false);
+              setShowPersonalOnboardingSeven(false);
+              setShowPersonalOnboardingEight(false);
+              setShowExploreHome(true);
+            }}
+            onForgotPasswordPress={(emailFromLogin) => {
+              setForgotPrefillEmail(emailFromLogin);
+              setEmailAuthPanel('forgot');
+            }}
+          />
+        }
+        panelForgot={
+          <ForgotPasswordFlow
+            visible={false}
+            initialEmail={forgotPrefillEmail}
+            onClose={() => {
+              setEmailAuthPanel('login');
+            }}
+            onFinished={() => {
+              setEmailAuthPanel('login');
+            }}
+          />
+        }
       />
       {showExploreHome ? (
         <MockRealEstateMapScreen
@@ -324,7 +402,7 @@ export default function App() {
       ) : authRoute === 'login' ? (
         <LoginScreen
           onGoSignup={() => setAuthRoute('signup')}
-          onEmailPress={() => setShowEmailAuthFlow(true)}
+          onEmailPress={() => setEmailAuthPanel('login')}
           onGooglePress={() => {
             setShowAgentOnboarding(false);
             setShowAgentProfileOnboarding(false);
@@ -344,7 +422,7 @@ export default function App() {
         <SignupScreen
           onGoLogin={() => setAuthRoute('login')}
           onApplePress={() => setShowAgentOnboarding(true)}
-          onEmailPress={() => setShowEmailAuthFlow(true)}
+          onEmailPress={() => setEmailAuthPanel('signup')}
         />
       )}
     </SafeAreaProvider>

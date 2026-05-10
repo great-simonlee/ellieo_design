@@ -28,7 +28,7 @@ export type AuthShellProps = {
   onGooglePress?: () => void;
   /** Login / sign-up: optional handler for the Apple OAuth row */
   onApplePress?: () => void;
-  /** Opens email signup / verification flow (design shell). */
+  /** Login / sign-up: email modal is wired by the parent (signup vs login). */
   onEmailPress?: () => void;
 };
 
