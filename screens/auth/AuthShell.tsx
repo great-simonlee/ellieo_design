@@ -26,6 +26,10 @@ export type AuthShellProps = {
   footer: ReactNode;
   /** Login / sign-up: optional handler for the Google OAuth row */
   onGooglePress?: () => void;
+  /** Login / sign-up: optional handler for the Apple OAuth row */
+  onApplePress?: () => void;
+  /** Opens email signup / verification flow (design shell). */
+  onEmailPress?: () => void;
 };
 
 export function AuthShell({
@@ -33,6 +37,8 @@ export function AuthShell({
   actionVerb,
   footer,
   onGooglePress,
+  onApplePress,
+  onEmailPress,
 }: AuthShellProps) {
   const insets = useSafeAreaInsets();
   const L = useAuthLayout();
@@ -269,6 +275,7 @@ export function AuthShell({
                 <Pressable
                   accessibilityRole='button'
                   accessibilityLabel={appleLabel}
+                  onPress={() => onApplePress?.()}
                   style={({ pressed }) => [
                     styles.loginBtn,
                     styles.loginBtnApple,
@@ -314,6 +321,7 @@ export function AuthShell({
                 <Pressable
                   accessibilityRole='button'
                   accessibilityLabel={emailLabel}
+                  onPress={() => onEmailPress?.()}
                   style={({ pressed }) => [
                     styles.loginBtn,
                     styles.loginBtnEmail,

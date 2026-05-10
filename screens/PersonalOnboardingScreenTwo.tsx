@@ -59,10 +59,10 @@ export function PersonalOnboardingScreenTwo({
   const { height: windowHeight } = useWindowDimensions();
   const { padH, primaryButtonWidth } = useOnboardingCtaLayout();
 
-  /** Step 1 of 5 — verification is `PersonalOnboardingScreenSix`. */
-  const ONBOARDING_TOTAL_STEPS = 5;
+  /** Step 1 of 6 — lifestyle is `PersonalOnboardingScreenSeven`. */
+  const ONBOARDING_TOTAL_STEPS = 6;
   const onboardingStepNumber = 1;
-  const progressRatio = 1 / 5;
+  const progressRatio = 1 / 6;
 
   const [legalFirst, setLegalFirst] = useState('');
   const [legalLast, setLegalLast] = useState('');

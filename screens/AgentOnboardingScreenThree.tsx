@@ -1,5 +1,5 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,80 +22,45 @@ import { colors, radius, space, type } from '../design/theme';
 const ink = '#1C1C1E';
 const labelSecondary = '#636366';
 const captionMuted = '#8E8E93';
-const counterShortfall = '#FF3B30';
 const fieldFill = '#F2F2F7';
 const fieldBorder = 'rgba(60, 60, 67, 0.12)';
-/** Minimum gap between the bio shell bottom and the scroll viewport bottom. */
-const INPUT_SCROLL_BOTTOM_MARGIN = space.md + space.sm;
-/** Don’t scroll the field’s top above this offset so the title/bullets stay visible when possible. */
-const INPUT_SCROLL_TOP_GUARD = space.sm;
-const MIN_INTRO_LENGTH = 150;
-const MAX_INTRO_LENGTH = 1000;
-/** Fixed typing area — content scrolls inside; shell must not grow with line count. */
+const counterShortfall = '#FF3B30';
+
+/** Agent profile onboarding (intro → bio → verify): 3 steps total. */
+const ONBOARDING_TOTAL_STEPS = 3;
+const onboardingStepNumber = 2;
+const progressRatio = onboardingStepNumber / ONBOARDING_TOTAL_STEPS;
+
+const MAX_BIO = 2000;
+const MIN_BIO = 150;
+/** Fixed typing area — text scrolls inside; shell does not stretch with the screen. */
 const BIO_TEXT_INPUT_HEIGHT = 200;
 
-type PersonalOnboardingScreenFiveProps = {
+type AgentOnboardingScreenThreeProps = {
   onBack: () => void;
-  onSkip?: () => void;
-  onComplete?: () => void;
+  onContinue: () => void;
 };
 
-export function PersonalOnboardingScreenFive({
+export function AgentOnboardingScreenThree({
   onBack,
-  onSkip,
-  onComplete,
-}: PersonalOnboardingScreenFiveProps) {
+  onContinue,
+}: AgentOnboardingScreenThreeProps) {
   const insets = useSafeAreaInsets();
   const { padH, contentMaxW, primaryButtonWidth } = useOnboardingCtaLayout();
 
-  const ONBOARDING_TOTAL_STEPS = 6;
-  const onboardingStepNumber = 4;
-  const progressRatio = 4 / 6;
-
   const [bio, setBio] = useState('');
   const [bioFocused, setBioFocused] = useState(false);
-  /** Same keyboard inset pattern as `PersonalOnboardingScreenThree` (CTA + scroll padding). */
   const [keyboardBottomInset, setKeyboardBottomInset] = useState(0);
+
   const scrollRef = useRef<ScrollView>(null);
-  /** ScrollView visible height (not content height). */
   const scrollViewportHRef = useRef(0);
-  /** Bio shell position/size inside scroll content (for scrollTo). */
+  const scrollContentHRef = useRef(0);
   const inputShellYRef = useRef(0);
   const inputShellHRef = useRef(0);
 
-  const scrollPaddingBottom =
-    space.xl +
-    (keyboardBottomInset > 0 ? space.xxl + space.md : 0);
-
-  /**
-   * Scroll the minimum amount so the bio shell clears the bottom of the viewport.
-   * Uses the ScrollView height *after* KAV shrinks; if `vh` is stale (too small), `minY` blows up
-   * and hides the title — so we only run this from `keyboardDidShow` + `ScrollView` `onLayout`.
-   */
-  const scrollBioIntoView = useCallback(() => {
-    const inputY = inputShellYRef.current;
-    const inputH = inputShellHRef.current;
-    const vh = scrollViewportHRef.current;
-    if (vh <= 0 || inputH <= 0) return;
-
-    const needY = inputY + inputH - vh + INPUT_SCROLL_BOTTOM_MARGIN;
-    const maxYToKeepFieldTopVisible = Math.max(0, inputY - INPUT_SCROLL_TOP_GUARD);
-    const viewportFitsWholeField =
-      vh >= inputH + INPUT_SCROLL_BOTTOM_MARGIN + INPUT_SCROLL_TOP_GUARD;
-
-    let y = Math.max(0, needY);
-    if (viewportFitsWholeField && needY > maxYToKeepFieldTopVisible) {
-      y = maxYToKeepFieldTopVisible;
-    }
-
-    scrollRef.current?.scrollTo({ y, animated: false });
-  }, []);
-
-  const scheduleScrollBioIntoView = useCallback(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(scrollBioIntoView);
-    });
-  }, [scrollBioIntoView]);
+  const bioLen = bio.length;
+  const bioTrim = bio.trim().length;
+  const introValid = bioTrim >= MIN_BIO && bioLen <= MAX_BIO;
 
   useEffect(() => {
     const showEvt =
@@ -113,19 +79,38 @@ export function PersonalOnboardingScreenFive({
     };
   }, []);
 
+  /**
+   * Scroll so the bio shell is vertically centered in the ScrollView viewport
+   * (above the keyboard once KAV has applied). Clamped to valid scroll range.
+   */
+  const scrollBioToCenter = useCallback(() => {
+    const inputY = inputShellYRef.current;
+    const inputH = inputShellHRef.current;
+    const vh = scrollViewportHRef.current;
+    const contentH = scrollContentHRef.current;
+    if (vh <= 0 || inputH <= 0 || contentH <= 0) return;
+
+    const maxScrollY = Math.max(0, contentH - vh);
+    const idealY = inputY + inputH / 2 - vh / 2;
+    const y = Math.min(maxScrollY, Math.max(0, idealY));
+    scrollRef.current?.scrollTo({ y, animated: true });
+  }, []);
+
+  const scheduleScrollBioToCenter = useCallback(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(scrollBioToCenter);
+    });
+  }, [scrollBioToCenter]);
+
   useEffect(() => {
-    const sub = Keyboard.addListener(
-      'keyboardDidShow',
-      scheduleScrollBioIntoView,
-    );
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      scheduleScrollBioToCenter();
+    });
     return () => sub.remove();
-  }, [scheduleScrollBioIntoView]);
+  }, [scheduleScrollBioToCenter]);
 
-  const trimmedLen = bio.trim().length;
-  const canSave =
-    trimmedLen >= MIN_INTRO_LENGTH && bio.length <= MAX_INTRO_LENGTH;
-
-  const countBelowMinimum = trimmedLen < MIN_INTRO_LENGTH;
+  const scrollPaddingBottom =
+    space.xl + (keyboardBottomInset > 0 ? space.xxl + space.md : 0);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -143,18 +128,6 @@ export function PersonalOnboardingScreenFive({
           ]}
         >
           <Ionicons name='chevron-back' size={26} color={ink} />
-        </Pressable>
-        <Pressable
-          accessibilityRole='button'
-          accessibilityLabel='Skip introduction'
-          onPress={() => onSkip?.()}
-          hitSlop={12}
-          style={({ pressed }) => [
-            styles.skipBtn,
-            pressed && styles.skipPressed,
-          ]}
-        >
-          <Text style={styles.skipLabel}>Skip</Text>
         </Pressable>
       </View>
 
@@ -184,6 +157,13 @@ export function PersonalOnboardingScreenFive({
         </Text>
       </View>
 
+      <Text
+        style={[styles.pageEyebrow, { paddingHorizontal: padH }]}
+        accessibilityRole='header'
+      >
+        INTRODUCTION
+      </Text>
+
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -195,8 +175,11 @@ export function PersonalOnboardingScreenFive({
           onLayout={(e) => {
             scrollViewportHRef.current = e.nativeEvent.layout.height;
             if (keyboardBottomInset > 0) {
-              scheduleScrollBioIntoView();
+              scheduleScrollBioToCenter();
             }
+          }}
+          onContentSizeChange={(_, h) => {
+            scrollContentHRef.current = h;
           }}
           contentContainerStyle={[
             styles.scrollContent,
@@ -211,36 +194,32 @@ export function PersonalOnboardingScreenFive({
           }
           showsVerticalScrollIndicator={keyboardBottomInset > 0}
         >
-          <Text style={[styles.screenTitle, { maxWidth: contentMaxW }]}>
-            Introduce Yourself
-          </Text>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={[styles.heroBlock, { maxWidth: contentMaxW }]}>
+              <Text style={styles.screenTitle}>
+                Let&apos;s get to know you
+              </Text>
 
-          <View style={[styles.introBullets, { width: contentMaxW }]}>
-            <View style={styles.bulletRow}>
-              <Text style={styles.bulletGlyph} accessibilityElementsHidden>
-                •
-              </Text>
-              <Text style={styles.introBulletText}>
-                Write a short introduction to help future roommates get to know
-                you better. (At least {MIN_INTRO_LENGTH} characters)
-              </Text>
+              <View style={styles.introBullets}>
+                <View style={styles.bulletRow}>
+                  <Text style={styles.bulletGlyph} accessibilityElementsHidden>
+                    •
+                  </Text>
+                  <Text style={styles.introBulletText}>
+                    Write a professional bio on helping renters and roommate
+                    seekers. Include how many years you have been in the field,
+                    and how many students and working professionals you have
+                    helped. (At least {MIN_BIO} characters)
+                  </Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.bulletRow}>
-              <Text style={styles.bulletGlyph} accessibilityElementsHidden>
-                •
-              </Text>
-              <Text style={styles.introBulletText}>
-                You can skip this for now, but you&apos;ll need to upload at
-                least 2 photos and write a short bio later to use the Roommate
-                Matching service.
-              </Text>
-            </View>
-          </View>
+          </TouchableWithoutFeedback>
 
           <View
             style={[
-              styles.inputShell,
-              bioFocused && styles.inputShellFocused,
+              styles.bioShell,
+              bioFocused && styles.bioShellFocused,
               { maxWidth: contentMaxW },
             ]}
             onLayout={(e) => {
@@ -251,43 +230,47 @@ export function PersonalOnboardingScreenFive({
           >
             <TextInput
               value={bio}
-              onChangeText={setBio}
-              placeholder='e.g. I&apos;m a grad student who enjoys quiet evenings, cooking on weekends, and keeping shared spaces tidy.'
+              onChangeText={(t) => setBio(t.slice(0, MAX_BIO))}
+              placeholder='Share your years of experience, how many students and working professionals you have helped, and how you guide renters and roommate seekers.'
               placeholderTextColor={captionMuted}
+              style={styles.bioInput}
               multiline
               scrollEnabled
-              maxLength={MAX_INTRO_LENGTH}
-              onSubmitEditing={() => Keyboard.dismiss()}
+              textAlignVertical='top'
+              selectionColor={colors.primary}
               onFocus={() => {
                 setBioFocused(true);
-                scheduleScrollBioIntoView();
+                scheduleScrollBioToCenter();
               }}
               onBlur={() => setBioFocused(false)}
-              style={styles.input}
-              textAlignVertical='top'
-              autoCorrect
-              keyboardType={
-                Platform.OS === 'ios' ? 'ascii-capable' : 'default'
-              }
-              selectionColor={colors.primary}
             />
-            <Text style={styles.counter} accessibilityLiveRegion='polite'>
-              <Text
-                style={countBelowMinimum ? styles.counterCurrentShort : undefined}
-              >
-                {bio.length}
+            <Pressable
+              accessibilityRole='button'
+              accessibilityLabel='Dismiss keyboard'
+              onPress={Keyboard.dismiss}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.counterHit}
+            >
+              <Text style={styles.bioCounter} accessibilityLiveRegion='polite'>
+                <Text
+                  style={
+                    bioTrim < MIN_BIO ? styles.bioCounterWarn : undefined
+                  }
+                >
+                  {bioLen}
+                </Text>
+                {`/${MAX_BIO} Characters`}
               </Text>
-              {`/${MAX_INTRO_LENGTH} Characters`}
-            </Text>
+            </Pressable>
           </View>
         </ScrollView>
 
         <OnboardingBottomCta
-          label='Save'
+          label='Continue'
           onPress={() => {
-            if (canSave) onComplete?.();
+            if (introValid) onContinue();
           }}
-          disabled={!canSave}
+          disabled={!introValid}
           padH={padH}
           safeBottomInset={
             keyboardBottomInset > 0 ? 0 : insets.bottom
@@ -305,29 +288,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   flex: { flex: 1 },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: space.xs,
+  scrollContent: {
+    paddingTop: space.xs,
   },
-  backBtn: {
-    marginLeft: -space.xs,
-    padding: space.xs,
-    borderRadius: radius.sm,
+  heroBlock: {
+    width: '100%',
+    alignSelf: 'center',
+    marginBottom: 0,
   },
-  backBtnPressed: { opacity: 0.55 },
-  skipBtn: {
-    paddingVertical: space.xs,
-    paddingHorizontal: space.sm,
-  },
-  skipPressed: { opacity: 0.55 },
-  skipLabel: {
-    fontSize: type.body,
-    fontWeight: '600',
-    color: colors.primary,
-    letterSpacing: -0.2,
-  },
+  headerRow: { paddingBottom: space.xs },
   progressBlock: {
     paddingBottom: space.md,
     width: '100%',
@@ -349,13 +318,22 @@ const styles = StyleSheet.create({
     color: captionMuted,
     letterSpacing: -0.1,
   },
-  scrollContent: {
-    paddingTop: space.sm,
-    maxWidth: 520,
-    width: '100%',
-    alignSelf: 'center',
+  backBtn: {
+    alignSelf: 'flex-start',
+    marginLeft: -space.xs,
+    padding: space.xs,
+    borderRadius: radius.sm,
   },
-  /** Matches `PersonalOnboardingScreenFour` title. */
+  backBtnPressed: { opacity: 0.55 },
+  /** Between progress and screen title; matches verify eyebrow on other agent steps. */
+  pageEyebrow: {
+    fontSize: type.micro,
+    fontWeight: '700',
+    color: colors.primary,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: space.sm,
+  },
   screenTitle: {
     fontSize: 30,
     fontWeight: '700',
@@ -363,13 +341,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
     lineHeight: 36,
     marginBottom: space.sm,
-    alignSelf: 'center',
-    width: '100%',
   },
-  /** Matches Four intro bullets. */
+  /** Matches `PersonalOnboardingScreenFive` intro bullets. */
   introBullets: {
-    alignSelf: 'center',
-    marginBottom: space.lg,
+    marginBottom: space.xl,
     gap: space.sm + 2,
   },
   bulletRow: {
@@ -393,7 +368,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: -0.2,
   },
-  inputShell: {
+  bioShell: {
     alignSelf: 'center',
     width: '100%',
     height: space.md + BIO_TEXT_INPUT_HEIGHT + space.xl + space.sm,
@@ -407,7 +382,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  inputShellFocused: {
+  bioShellFocused: {
     borderWidth: 2,
     borderColor: colors.primary,
     ...Platform.select({
@@ -422,7 +397,7 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  input: {
+  bioInput: {
     height: BIO_TEXT_INPUT_HEIGHT,
     fontSize: type.bodyLarge,
     lineHeight: 24,
@@ -432,16 +407,18 @@ const styles = StyleSheet.create({
     padding: 0,
     margin: 0,
   },
-  counter: {
+  counterHit: {
     position: 'absolute',
     right: space.lg,
-    bottom: space.sm + 2,
+    bottom: space.md,
+  },
+  bioCounter: {
     fontSize: type.caption,
-    color: captionMuted,
     fontWeight: '500',
+    color: captionMuted,
     letterSpacing: -0.1,
   },
-  counterCurrentShort: {
+  bioCounterWarn: {
     color: counterShortfall,
     fontWeight: '700',
   },

@@ -19,6 +19,10 @@ export type OnboardingBottomCtaProps = {
   padH: number;
   safeBottomInset: number;
   buttonWidth: number;
+  /** Padding below the button in addition to safe area (default `space.sm`). */
+  dockBottomGap?: number;
+  /** Top padding of the white dock (default `space.sm + 2`). */
+  dockPaddingTop?: number;
 };
 
 /**
@@ -33,6 +37,8 @@ export function OnboardingBottomCta({
   padH,
   safeBottomInset,
   buttonWidth,
+  dockBottomGap = space.sm,
+  dockPaddingTop = space.sm + 2,
 }: OnboardingBottomCtaProps) {
   return (
     <View
@@ -40,7 +46,8 @@ export function OnboardingBottomCta({
         styles.dock,
         {
           paddingHorizontal: padH,
-          paddingBottom: safeBottomInset + space.sm,
+          paddingTop: dockPaddingTop,
+          paddingBottom: safeBottomInset + dockBottomGap,
         },
       ]}
     >
@@ -74,7 +81,6 @@ export function OnboardingBottomCta({
 
 const styles = StyleSheet.create({
   dock: {
-    paddingTop: space.sm + 2,
     alignItems: 'center',
     backgroundColor: '#ffffff',
   },

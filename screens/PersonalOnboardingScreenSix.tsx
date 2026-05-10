@@ -108,9 +108,9 @@ export function PersonalOnboardingScreenSix({
   const { padH, contentMaxW, primaryButtonWidth } = useOnboardingCtaLayout();
   const compactHub = windowH < 720;
 
-  const ONBOARDING_TOTAL_STEPS = 5;
+  const ONBOARDING_TOTAL_STEPS = 6;
   const onboardingStepNumber = 5;
-  const progressRatio = 1;
+  const progressRatio = 5 / 6;
 
   const [schoolDone, setSchoolDone] = useState(false);
   const [sheet, setSheet] = useState<SheetState>(null);
@@ -130,6 +130,8 @@ export function PersonalOnboardingScreenSix({
   const canNext = schoolDone;
   const sheetOpen = sheet != null;
   const modalButtonW = Math.min(contentMaxW, windowW - padH * 2);
+  const trimmedSchoolEmail = schoolEmail.trim();
+  const useCompactEmailType = trimmedSchoolEmail.length > 36;
 
   const closeSheet = useCallback(() => {
     setSheet(null);
@@ -408,11 +410,19 @@ export function PersonalOnboardingScreenSix({
                     ]}
                   >
                     <LinearGradient
-                      colors={['#F4F8FF', '#EEF4FF', '#F8FAFF']}
-                      locations={[0, 0.45, 1]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
+                      colors={['#FAFCFF', '#EEF3FC', '#F5F8FF', '#FFFFFF']}
+                      locations={[0, 0.28, 0.62, 1]}
+                      start={{ x: 0.08, y: 0 }}
+                      end={{ x: 0.92, y: 1 }}
                       style={StyleSheet.absoluteFill}
+                    />
+                    <LinearGradient
+                      colors={['rgba(255,255,255,0.85)', 'rgba(255,255,255,0)', 'rgba(123,166,255,0.06)']}
+                      locations={[0, 0.22, 1]}
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={styles.celebrateCardSheen}
+                      pointerEvents='none'
                     />
                     <View style={styles.celebrateMeshA} pointerEvents='none'>
                       <LinearGradient
@@ -440,23 +450,58 @@ export function PersonalOnboardingScreenSix({
                     </View>
 
                     <View style={styles.celebrateInner}>
-                      <LinearGradient
-                        colors={['#E8F0FF', '#D4E4FF']}
-                        start={{ x: 0, y: 0.5 }}
-                        end={{ x: 1, y: 0.5 }}
-                        style={styles.celebrateCreditChip}
-                      >
+                      <View style={styles.celebrateCreditChip}>
+                        {Platform.OS === 'ios' ? (
+                          <BlurView
+                            intensity={28}
+                            tint='light'
+                            style={StyleSheet.absoluteFill}
+                          />
+                        ) : (
+                          <View
+                            style={[
+                              StyleSheet.absoluteFill,
+                              styles.celebrateCreditChipAndroidFill,
+                            ]}
+                          />
+                        )}
+                        <LinearGradient
+                          colors={[
+                            'rgba(255,255,255,0.72)',
+                            'rgba(255,255,255,0.28)',
+                          ]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={StyleSheet.absoluteFill}
+                        />
                         <Ionicons
                           name='sparkles'
                           size={15}
                           color={colors.primary}
+                          style={styles.celebrateCreditChipIcon}
                         />
                         <Text style={styles.celebrateCreditChipText}>
                           Credits unlocked
                         </Text>
-                      </LinearGradient>
+                      </View>
 
                       <View style={styles.celebrateHeroMark}>
+                        <View
+                          style={[styles.celebrateSparkleDot, styles.celebrateSparklePos1]}
+                          pointerEvents='none'
+                        />
+                        <View
+                          style={[styles.celebrateSparkleDot, styles.celebrateSparklePos2]}
+                          pointerEvents='none'
+                        />
+                        <View
+                          style={[styles.celebrateSparkleDot, styles.celebrateSparklePos3]}
+                          pointerEvents='none'
+                        />
+                        <View
+                          style={[styles.celebrateSparkleDot, styles.celebrateSparklePos4]}
+                          pointerEvents='none'
+                        />
                         <Animated.View
                           pointerEvents='none'
                           style={[
@@ -491,18 +536,18 @@ export function PersonalOnboardingScreenSix({
                             />
                           </View>
                         </LinearGradient>
-                        <View
+                        <LinearGradient
+                          colors={[colors.amber, '#FDE68A']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
                           style={styles.celebrateSealBadge}
                           pointerEvents='none'
                         >
-                          <Ionicons
-                            name='ribbon'
-                            size={18}
-                            color={colors.amber}
-                          />
-                        </View>
+                          <Ionicons name='ribbon' size={17} color='#92400E' />
+                        </LinearGradient>
                       </View>
 
+                      <Text style={styles.celebrateEyebrow}>Identity</Text>
                       <Text
                         style={[
                           styles.celebrateTitle,
@@ -513,14 +558,14 @@ export function PersonalOnboardingScreenSix({
                       </Text>
                       <Text style={styles.celebrateSubtitle}>
                         School email is on file — bonus credits will land on
-                        your account shortly. You can keep going or layer on
-                        more trust signals whenever you like.
+                        your account shortly. Keep going, or add more trust
+                        signals whenever you&apos;re ready.
                       </Text>
 
                       <View style={styles.celebrateEmailShell}>
                         {Platform.OS === 'ios' ? (
                           <BlurView
-                            intensity={36}
+                            intensity={32}
                             tint='light'
                             style={styles.celebrateBlurFill}
                           />
@@ -532,60 +577,90 @@ export function PersonalOnboardingScreenSix({
                             ]}
                           />
                         )}
-                        <View style={styles.celebrateEmailRow}>
-                          <LinearGradient
-                            colors={[
-                              'rgba(47,109,246,0.14)',
-                              'rgba(47,109,246,0.06)',
-                            ]}
-                            style={styles.celebrateEmailIcon}
-                          >
-                            <Ionicons
-                              name='mail'
-                              size={22}
-                              color={colors.primary}
-                            />
-                          </LinearGradient>
-                          <View style={styles.celebrateEmailCopy}>
-                            <Text style={styles.celebrateEmailLabel}>
-                              School email
-                            </Text>
-                            <Text
-                              style={styles.celebrateEmailValue}
-                              numberOfLines={1}
-                              ellipsizeMode='middle'
+                        <LinearGradient
+                          colors={['rgba(255,255,255,0.97)', '#F7FAFF']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.celebrateEmailSurface}
+                          pointerEvents='none'
+                        />
+                        <View style={styles.celebrateEmailInner}>
+                          <View style={styles.celebrateEmailCardRow}>
+                            <View
+                              style={styles.celebrateEmailSeal}
+                              accessibilityLabel='School email verified'
                             >
-                              {schoolEmail.trim() || 'Verified'}
-                            </Text>
-                          </View>
-                          <View style={styles.celebrateEmailTrail}>
-                            <Ionicons
-                              name='shield-checkmark'
-                              size={26}
-                              color={successGreen}
-                              accessibilityLabel='School email confirmed'
-                            />
+                              <Ionicons
+                                name='checkmark'
+                                size={14}
+                                color='#FFFFFF'
+                              />
+                            </View>
+                            <View style={styles.celebrateEmailTextBlock}>
+                              <Text
+                                style={styles.celebrateEmailMetaLine}
+                                {...Platform.select({
+                                  android: { includeFontPadding: false },
+                                })}
+                              >
+                                <Text style={styles.celebrateEmailLabelInline}>
+                                  School email
+                                </Text>
+                                <Text style={styles.celebrateEmailMetaSep}>
+                                  {' '}
+                                  ·{' '}
+                                </Text>
+                                <Text
+                                  style={styles.celebrateEmailVerifiedInline}
+                                >
+                                  Verified
+                                </Text>
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.celebrateEmailValue,
+                                  useCompactEmailType &&
+                                    styles.celebrateEmailValueCompact,
+                                ]}
+                                {...Platform.select({
+                                  android: { includeFontPadding: false },
+                                })}
+                                selectable
+                                numberOfLines={1}
+                                ellipsizeMode='tail'
+                                accessibilityLabel={
+                                  trimmedSchoolEmail || 'Verified school email'
+                                }
+                              >
+                                {trimmedSchoolEmail || 'Verified'}
+                              </Text>
+                            </View>
                           </View>
                         </View>
                       </View>
 
-                      <Text style={styles.celebrateFootnote}>
-                        LinkedIn, Instagram, and phone checks are rolling out
-                        next — optional extras to help roommates recognize you
-                        faster.
-                      </Text>
+                      <View style={styles.celebrateFootnoteWrap}>
+                        <Text style={styles.celebrateFootnote}>
+                          LinkedIn, Instagram, and phone checks are rolling out
+                          next — optional extras so roommates recognize you
+                          faster.
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 </ScrollView>
               </Animated.View>
             ) : (
               <>
-                <Text style={styles.screenTitle}>
+                <Text
+                  style={[styles.screenTitle, { maxWidth: contentMaxW }]}
+                >
                   Unlock your free credits!
                 </Text>
                 <Text
                   style={[
                     styles.screenSubtitle,
+                    { maxWidth: contentMaxW },
                     compactHub && styles.screenSubtitleCompact,
                   ]}
                 >
@@ -1044,7 +1119,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: space.xs,
-    backgroundColor: '#FFFFFF',
   },
   backBtn: {
     marginLeft: -space.xs,
@@ -1060,18 +1134,18 @@ const styles = StyleSheet.create({
   skipLabel: {
     fontSize: type.body,
     fontWeight: '600',
-    color: captionMuted,
+    color: colors.primary,
     letterSpacing: -0.2,
   },
+  /** Matches `PersonalOnboardingScreenFive` progress chrome. */
   progressBlock: {
-    paddingBottom: space.sm,
+    paddingBottom: space.md,
     width: '100%',
-    backgroundColor: '#FFFFFF',
   },
   progressTrack: {
-    height: 3,
+    height: 4,
     borderRadius: 2,
-    backgroundColor: '#EBEBED',
+    backgroundColor: '#E5E5EA',
     overflow: 'hidden',
   },
   progressFill: {
@@ -1079,7 +1153,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   progressCaption: {
-    marginTop: space.xs + 2,
+    marginTop: space.sm,
     fontSize: type.caption,
     fontWeight: '600',
     color: captionMuted,
@@ -1132,16 +1206,20 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     borderWidth: 1,
-    borderColor: 'rgba(47, 109, 246, 0.12)',
+    borderColor: 'rgba(47, 109, 246, 0.1)',
     ...Platform.select({
       ios: {
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 20 },
-        shadowOpacity: 0.12,
-        shadowRadius: 36,
+        shadowColor: '#1e3a5f',
+        shadowOffset: { width: 0, height: 24 },
+        shadowOpacity: 0.1,
+        shadowRadius: 44,
       },
-      android: { elevation: 5 },
+      android: { elevation: 6 },
     }),
+  },
+  celebrateCardSheen: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.95,
   },
   celebrateCardCompact: {
     borderRadius: radius.xl + 4,
@@ -1174,26 +1252,44 @@ const styles = StyleSheet.create({
   },
   celebrateInner: {
     paddingHorizontal: space.xl,
-    paddingTop: space.xl + 4,
-    paddingBottom: space.lg,
+    paddingTop: space.xl + 6,
+    paddingBottom: space.lg + 2,
     alignItems: 'center',
   },
   celebrateCreditChip: {
+    position: 'relative',
+    overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    paddingVertical: 8,
-    paddingHorizontal: space.md + 2,
+    gap: 8,
+    paddingVertical: 9,
+    paddingHorizontal: space.md + 4,
     borderRadius: radius.pill,
-    marginBottom: space.xl,
+    marginBottom: space.xl + 2,
     borderWidth: 1,
-    borderColor: 'rgba(47, 109, 246, 0.18)',
+    borderColor: 'rgba(255, 255, 255, 0.95)',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 14,
+      },
+      android: { elevation: 3 },
+    }),
+  },
+  celebrateCreditChipAndroidFill: {
+    backgroundColor: 'rgba(248, 250, 255, 0.92)',
+  },
+  celebrateCreditChipIcon: {
+    zIndex: 2,
   },
   celebrateCreditChipText: {
+    zIndex: 2,
     fontSize: type.caption,
     fontWeight: '700',
-    color: '#1A3A8A',
-    letterSpacing: 0.4,
+    color: '#153A8A',
+    letterSpacing: 0.45,
     textTransform: 'uppercase',
   },
   celebrateHeroMark: {
@@ -1204,13 +1300,42 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
   },
+  celebrateSparkleDot: {
+    position: 'absolute',
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  celebrateSparklePos1: {
+    top: 10,
+    left: 4,
+    backgroundColor: 'rgba(47, 109, 246, 0.45)',
+  },
+  celebrateSparklePos2: {
+    top: 6,
+    right: 8,
+    backgroundColor: 'rgba(34, 211, 238, 0.5)',
+  },
+  celebrateSparklePos3: {
+    bottom: 14,
+    left: 2,
+    backgroundColor: 'rgba(168, 85, 247, 0.35)',
+  },
+  celebrateSparklePos4: {
+    bottom: 6,
+    right: 4,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: 'rgba(47, 109, 246, 0.3)',
+  },
   celebratePulseRing: {
     position: 'absolute',
     width: 112,
     height: 112,
     borderRadius: 56,
     borderWidth: 2,
-    borderColor: 'rgba(47, 109, 246, 0.35)',
+    borderColor: 'rgba(47, 109, 246, 0.28)',
   },
   celebrateSealRing: {
     width: 108,
@@ -1245,33 +1370,41 @@ const styles = StyleSheet.create({
   },
   celebrateSealBadge: {
     position: 'absolute',
-    top: -4,
-    right: -2,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    top: -6,
+    right: -4,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.45)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.95)',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
+        shadowColor: '#92400E',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
       },
-      android: { elevation: 3 },
+      android: { elevation: 5 },
     }),
+  },
+  celebrateEyebrow: {
+    fontSize: type.micro,
+    fontWeight: '700',
+    color: 'rgba(47, 109, 246, 0.88)',
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+    textAlign: 'center',
   },
   celebrateTitle: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#0F1729',
-    letterSpacing: -1.1,
+    color: '#0B1220',
+    letterSpacing: -1.15,
     lineHeight: 38,
-    marginBottom: space.sm + 2,
+    marginBottom: space.sm + 4,
     textAlign: 'center',
   },
   celebrateTitleCompact: {
@@ -1281,80 +1414,127 @@ const styles = StyleSheet.create({
   },
   celebrateSubtitle: {
     fontSize: type.body,
-    lineHeight: 23,
-    color: '#4A5568',
+    lineHeight: 24,
+    color: '#5C6678',
     fontWeight: '400',
-    letterSpacing: -0.22,
-    marginBottom: space.xl,
+    letterSpacing: -0.2,
+    marginBottom: space.xl + 2,
     textAlign: 'center',
-    maxWidth: 328,
+    maxWidth: 336,
   },
   celebrateEmailShell: {
     width: '100%',
-    borderRadius: radius.lg + 4,
+    borderRadius: radius.lg + 2,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(47, 109, 246, 0.14)',
+    borderColor: 'rgba(15, 23, 41, 0.06)',
     position: 'relative',
     ...Platform.select({
       ios: {
-        shadowColor: '#1e293b',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.06,
-        shadowRadius: 14,
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
       },
       android: { elevation: 2 },
     }),
+  },
+  celebrateEmailSurface: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.92,
+  },
+  celebrateEmailInner: {
+    position: 'relative',
+    zIndex: 1,
+    paddingVertical: space.md + 4,
+    paddingHorizontal: space.lg,
   },
   celebrateBlurFill: {
     ...StyleSheet.absoluteFillObject,
   },
   celebrateEmailAndroidBg: {
-    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    backgroundColor: '#FAFBFD',
   },
-  celebrateEmailRow: {
+  celebrateEmailCardRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    paddingVertical: space.md + 4,
-    paddingHorizontal: space.lg,
   },
-  celebrateEmailIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
+  celebrateEmailSeal: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: successGreen,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: successGreen,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.28,
+        shadowRadius: 6,
+      },
+      android: { elevation: 3 },
+    }),
   },
-  celebrateEmailCopy: {
+  celebrateEmailTextBlock: {
     flex: 1,
     minWidth: 0,
+    justifyContent: 'center',
+    gap: 3,
   },
-  celebrateEmailLabel: {
+  celebrateEmailMetaLine: {
     fontSize: type.caption,
+    lineHeight: 16,
+    letterSpacing: -0.1,
+  },
+  celebrateEmailLabelInline: {
     fontWeight: '600',
     color: '#64748B',
-    letterSpacing: -0.05,
-    marginBottom: 4,
+  },
+  celebrateEmailMetaSep: {
+    fontWeight: '500',
+    color: '#94A3B8',
+  },
+  celebrateEmailVerifiedInline: {
+    fontWeight: '700',
+    color: '#15803D',
+    letterSpacing: -0.02,
   },
   celebrateEmailValue: {
     fontSize: type.bodyLarge,
     fontWeight: '600',
-    color: '#0F1729',
-    letterSpacing: -0.4,
+    color: '#0B1220',
+    letterSpacing: -0.42,
+    lineHeight: 23,
+    /** Required so ellipsis works inside a flex row. */
+    alignSelf: 'stretch',
   },
-  celebrateEmailTrail: {
-    flexShrink: 0,
+  celebrateEmailValueCompact: {
+    fontSize: type.body,
+    lineHeight: 20,
+    letterSpacing: -0.3,
+  },
+  celebrateFootnoteWrap: {
+    marginTop: space.xl,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 340,
+    paddingVertical: space.md + 2,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(47, 109, 246, 0.045)',
+    borderWidth: 1,
+    borderColor: 'rgba(47, 109, 246, 0.08)',
   },
   celebrateFootnote: {
-    marginTop: space.lg + 4,
     fontSize: type.caption,
-    lineHeight: 18,
-    color: '#64748B',
+    lineHeight: 19,
+    color: '#5C6678',
     fontWeight: '500',
-    letterSpacing: -0.08,
+    letterSpacing: -0.06,
     textAlign: 'center',
-    maxWidth: 310,
   },
   completionDock: {
     flexDirection: 'row',
@@ -1430,18 +1610,21 @@ const styles = StyleSheet.create({
   completionPrimaryChevron: {
     marginTop: 1,
   },
+  /** Matches `PersonalOnboardingScreenFive` hero title. */
   screenTitle: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '700',
     color: ink,
-    letterSpacing: -0.75,
-    lineHeight: 34,
-    marginBottom: space.xs + 2,
+    letterSpacing: -0.8,
+    lineHeight: 36,
+    marginBottom: space.sm,
+    alignSelf: 'center',
     width: '100%',
   },
+  /** Matches `PersonalOnboardingScreenFive` intro body copy. */
   screenSubtitle: {
     fontSize: type.body,
-    lineHeight: 21,
+    lineHeight: 22,
     color: labelSecondary,
     fontWeight: '400',
     letterSpacing: -0.2,
@@ -1478,12 +1661,13 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 4,
   },
+  /** Matches Five-style small supporting line (caption size, muted). */
   verifySubtle: {
     fontSize: type.caption,
     lineHeight: 18,
     color: captionMuted,
-    fontWeight: '500',
-    letterSpacing: -0.05,
+    fontWeight: '400',
+    letterSpacing: -0.1,
     marginBottom: space.md,
     maxWidth: 340,
   },

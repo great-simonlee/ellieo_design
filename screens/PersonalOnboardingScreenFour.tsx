@@ -123,9 +123,9 @@ export function PersonalOnboardingScreenFour({
   const { height: windowH } = useWindowDimensions();
   const { padH, contentMaxW, primaryButtonWidth } = useOnboardingCtaLayout();
 
-  const ONBOARDING_TOTAL_STEPS = 5;
+  const ONBOARDING_TOTAL_STEPS = 6;
   const onboardingStepNumber = 3;
-  const progressRatio = 3 / 5;
+  const progressRatio = 3 / 6;
 
   const [slots, setSlots] = useState<(string | null)[]>(() =>
     Array(SLOT_COUNT).fill(null),
@@ -783,9 +783,9 @@ const styles = StyleSheet.create({
       android: { elevation: 0 },
     }),
   },
+  /** Fills the slot’s content box edge-to-edge (avoids flex inset + white gap under border). */
   slotPressable: {
-    flex: 1,
-    borderRadius: radius.md - 1,
+    ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
   },
   slotProfileOutline: {
@@ -805,7 +805,6 @@ const styles = StyleSheet.create({
   },
   slotImage: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: radius.md - 1,
   },
   slotEmptyInner: {
     flex: 1,

@@ -17,22 +17,22 @@ import { OnboardingBottomCta } from '../components/OnboardingBottomCta';
 import { useOnboardingCtaLayout } from '../design/onboardingCtaLayout';
 import { colors, radius, space, type } from '../design/theme';
 
-const RULES: { title: string; body: string }[] = [
+const AGENT_RULES: { title: string; body: string }[] = [
   {
-    title: 'Be yourself',
-    body: 'Just be real — genuine photos and stories help everyone trust each other.',
+    title: 'List accurately',
+    body: 'Keep availability, pricing, and photos up to date so renters know what to expect.',
   },
   {
-    title: 'Be safe',
-    body: 'Look out for yourself and others. If something feels off, let us know.',
+    title: 'Respond promptly',
+    body: 'Reply to inquiries in a timely way — it helps everyone move faster.',
   },
   {
-    title: 'Be respectful',
-    body: "Kindness goes a long way. Treat your roommates the way you'd like to be treated.",
+    title: 'Follow fair housing',
+    body: 'Treat all applicants equally and comply with local housing regulations.',
   },
   {
-    title: 'Create a welcoming home.',
-    body: 'Together, we can make Ellieo a safe and friendly space for everyone.',
+    title: 'Build trust on Ellieo',
+    body: 'Honest listings and clear communication make the community stronger for agents and renters.',
   },
 ];
 
@@ -42,26 +42,24 @@ const bodyMuted = '#6B6F7C';
 const rulesSurface = '#F3F5F8';
 const rulesBorder = 'rgba(15, 23, 42, 0.06)';
 
-type PersonalOnboardingScreenProps = {
+type AgentOnboardingScreenProps = {
   onClose: () => void;
   onAgree?: () => void;
 };
 
-export function PersonalOnboardingScreen({
+export function AgentOnboardingScreen({
   onClose,
   onAgree,
-}: PersonalOnboardingScreenProps) {
+}: AgentOnboardingScreenProps) {
   const insets = useSafeAreaInsets();
   const { screenW, padH, contentMaxW, primaryButtonWidth } =
     useOnboardingCtaLayout();
   const [rulesViewportH, setRulesViewportH] = useState(0);
   const [rulesContentH, setRulesContentH] = useState(0);
 
-  /** Taller hero pulls content up visually; ~56% width reads as a modest bump vs 50%. */
   const heroHeight = Math.round(screenW * 0.56);
   const heroRadius = Math.min(radius.xl + 4, Math.round(screenW * 0.055));
 
-  /** When rules fit, vertically center the card in the area between subtitle and button. */
   const rulesFitBand =
     rulesViewportH > 0 &&
     rulesContentH > 0 &&
@@ -69,7 +67,7 @@ export function PersonalOnboardingScreen({
 
   return (
     <View style={styles.root}>
-      <StatusBar style='light' />
+      <StatusBar style='dark' />
 
       <View
         style={[
@@ -82,8 +80,8 @@ export function PersonalOnboardingScreen({
         ]}
       >
         <Image
-          accessibilityLabel='Ellieo onboarding'
-          source={require('../assets/img/personal_onboarding.png')}
+          accessibilityLabel='Agent onboarding'
+          source={require('../assets/img/agent_onboarding.png')}
           style={{ width: screenW, height: heroHeight }}
           resizeMode='cover'
         />
@@ -125,16 +123,18 @@ export function PersonalOnboardingScreen({
 
       <View style={styles.mainColumn}>
         <View style={[styles.headerBlock, { paddingHorizontal: padH }]}>
-          <Text style={styles.eyebrow}>House rules</Text>
+          <Text style={styles.eyebrow}>Agent guidelines</Text>
           <Text style={styles.titleLine}>
             <Text style={styles.titlePlain}>Welcome to </Text>
             <Text style={styles.titleBrand}>Ellieo</Text>
           </Text>
-          <Text style={styles.subtitle}>Please follow our house rules.</Text>
+          <Text style={styles.subtitle}>
+            Please follow our guidelines for agents.
+          </Text>
         </View>
 
         <ScrollView
-          accessibilityLabel='House rules list'
+          accessibilityLabel='Agent guidelines list'
           style={styles.rulesScroll}
           contentContainerStyle={[
             { paddingHorizontal: padH },
@@ -151,9 +151,7 @@ export function PersonalOnboardingScreen({
                   paddingBottom: space.xs,
                 },
           ]}
-          onLayout={(e) =>
-            setRulesViewportH(e.nativeEvent.layout.height)
-          }
+          onLayout={(e) => setRulesViewportH(e.nativeEvent.layout.height)}
           onContentSizeChange={(_, h) => setRulesContentH(h)}
           showsVerticalScrollIndicator
           bounces
@@ -166,12 +164,12 @@ export function PersonalOnboardingScreen({
             ]}
           >
             <View style={styles.rulesCard}>
-              {RULES.map((rule, i) => (
+              {AGENT_RULES.map((rule, i) => (
                 <View
                   key={rule.title}
                   style={[
                     styles.ruleRow,
-                    i < RULES.length - 1 && styles.ruleRowDivider,
+                    i < AGENT_RULES.length - 1 && styles.ruleRowDivider,
                   ]}
                 >
                   <View style={styles.ruleAccent} />
@@ -205,7 +203,7 @@ const styles = StyleSheet.create({
   heroShell: {
     width: '100%',
     overflow: 'hidden',
-    backgroundColor: '#0f172a',
+    backgroundColor: '#ffffff',
   },
   closeOuter: {
     position: 'absolute',
@@ -230,6 +228,7 @@ const styles = StyleSheet.create({
   mainColumn: {
     flex: 1,
     minHeight: 0,
+    backgroundColor: '#ffffff',
   },
   headerBlock: {
     paddingTop: space.xl + space.md,
@@ -238,6 +237,7 @@ const styles = StyleSheet.create({
   rulesScroll: {
     flex: 1,
     minHeight: 0,
+    backgroundColor: '#ffffff',
   },
   rulesCardOuter: {
     alignSelf: 'center',

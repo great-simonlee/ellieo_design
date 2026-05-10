@@ -62,9 +62,9 @@ export function PersonalOnboardingScreenThree({
   const { height: windowHeight } = useWindowDimensions();
   const { padH, primaryButtonWidth } = useOnboardingCtaLayout();
 
-  const ONBOARDING_TOTAL_STEPS = 5;
+  const ONBOARDING_TOTAL_STEPS = 6;
   const onboardingStepNumber = 2;
-  const progressRatio = 2 / 5;
+  const progressRatio = 2 / 6;
 
   const [gender, setGender] = useState<GenderId | null>(null);
   const [status, setStatus] = useState<'student' | 'working' | null>(null);

@@ -6,15 +6,24 @@ import { useAuthLayout } from './auth/useAuthLayout';
 type LoginScreenProps = {
   onGoSignup: () => void;
   onGooglePress: () => void;
+  onApplePress: () => void;
+  onEmailPress?: () => void;
 };
 
-export function LoginScreen({ onGoSignup, onGooglePress }: LoginScreenProps) {
+export function LoginScreen({
+  onGoSignup,
+  onGooglePress,
+  onApplePress,
+  onEmailPress,
+}: LoginScreenProps) {
   const L = useAuthLayout();
 
   return (
     <AuthShell
       actionVerb='Log in'
       onGooglePress={onGooglePress}
+      onApplePress={onApplePress}
+      onEmailPress={onEmailPress}
       welcome={
         <View style={authStyles.welcomeBlock}>
           <Text

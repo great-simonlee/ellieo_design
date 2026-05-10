@@ -5,14 +5,22 @@ import { useAuthLayout } from './auth/useAuthLayout';
 
 type SignupScreenProps = {
   onGoLogin: () => void;
+  onApplePress?: () => void;
+  onEmailPress?: () => void;
 };
 
-export function SignupScreen({ onGoLogin }: SignupScreenProps) {
+export function SignupScreen({
+  onGoLogin,
+  onApplePress,
+  onEmailPress,
+}: SignupScreenProps) {
   const L = useAuthLayout();
 
   return (
     <AuthShell
       actionVerb='Sign up'
+      onApplePress={onApplePress}
+      onEmailPress={onEmailPress}
       welcome={
         <View style={authStyles.welcomeBlock}>
           <Text
