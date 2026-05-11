@@ -1,5 +1,5 @@
 import { useFonts } from 'expo-font';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AgentOnboardingScreen } from './screens/AgentOnboardingScreen';
@@ -59,11 +59,14 @@ export default function App() {
   const [emailAuthPanel, setEmailAuthPanel] = useState<EmailAuthPanel | null>(
     null,
   );
+  const [emailAuthBackgroundRoute, setEmailAuthBackgroundRoute] =
+    useState<AuthRoute | null>(null);
   const [forgotPrefillEmail, setForgotPrefillEmail] = useState('');
   const [blockEmailAuthClose, setBlockEmailAuthClose] = useState(false);
   const defaultsPatchedRef = useRef(false);
 
   const emailAuthOverlayOpen = showAuth && emailAuthPanel !== null;
+  const visibleAuthRoute = emailAuthBackgroundRoute ?? authRoute;
   const [fontsLoaded] = useFonts({
     Pretendard: require('./assets/fonts/pretendard/Pretendard-Regular.ttf'),
   });
@@ -119,89 +122,21 @@ export default function App() {
     if (!emailAuthOverlayOpen) setBlockEmailAuthClose(false);
   }, [emailAuthOverlayOpen]);
 
+  const openEmailAuthPanel = (panel: EmailAuthPanel) => {
+    setEmailAuthBackgroundRoute(authRoute);
+    setEmailAuthPanel(panel);
+  };
+  const handleEmailAuthAfterClose = useCallback(() => {
+    setEmailAuthBackgroundRoute(null);
+  }, []);
+
   if (!fontsLoaded) {
     return <LoadingScreen />;
   }
 
   return (
     <SafeAreaProvider>
-      <EmailAuthModal
-        visible={emailAuthOverlayOpen}
-        activePanel={emailAuthPanel}
-        onRequestClose={() => {
-          if (blockEmailAuthClose) return;
-          setEmailAuthPanel(null);
-          setForgotPrefillEmail('');
-        }}
-        panelSignup={
-          <EmailSignupFlow
-            visible={false}
-            onHardwareCloseBlockedChange={setBlockEmailAuthClose}
-            onClose={() => setEmailAuthPanel(null)}
-            onSwitchToLogin={() => {
-              setAuthRoute('login');
-              setEmailAuthPanel('login');
-            }}
-            onFinished={() => {
-              setEmailAuthPanel(null);
-              setShowAuth(false);
-              setShowAgentOnboarding(false);
-              setShowAgentProfileOnboarding(false);
-              setShowPersonalOnboarding(false);
-              setShowPersonalOnboardingTwo(false);
-              setShowPersonalOnboardingThree(false);
-              setShowPersonalOnboardingFour(false);
-              setShowPersonalOnboardingFive(false);
-              setShowPersonalOnboardingSix(false);
-              setShowPersonalOnboardingSeven(false);
-              setShowPersonalOnboardingEight(false);
-              setShowExploreHome(true);
-            }}
-          />
-        }
-        panelLogin={
-          <EmailLoginFlow
-            visible={false}
-            onClose={() => setEmailAuthPanel(null)}
-            onSwitchToSignup={() => {
-              setAuthRoute('signup');
-              setEmailAuthPanel('signup');
-            }}
-            onLoggedIn={() => {
-              setEmailAuthPanel(null);
-              setShowAuth(false);
-              setShowAgentOnboarding(false);
-              setShowAgentProfileOnboarding(false);
-              setShowPersonalOnboarding(false);
-              setShowPersonalOnboardingTwo(false);
-              setShowPersonalOnboardingThree(false);
-              setShowPersonalOnboardingFour(false);
-              setShowPersonalOnboardingFive(false);
-              setShowPersonalOnboardingSix(false);
-              setShowPersonalOnboardingSeven(false);
-              setShowPersonalOnboardingEight(false);
-              setShowExploreHome(true);
-            }}
-            onForgotPasswordPress={(emailFromLogin) => {
-              setForgotPrefillEmail(emailFromLogin);
-              setEmailAuthPanel('forgot');
-            }}
-          />
-        }
-        panelForgot={
-          <ForgotPasswordFlow
-            visible={false}
-            initialEmail={forgotPrefillEmail}
-            onHardwareCloseBlockedChange={setBlockEmailAuthClose}
-            onClose={() => {
-              setEmailAuthPanel('login');
-            }}
-            onFinished={() => {
-              setEmailAuthPanel('login');
-            }}
-          />
-        }
-      />
+      <View style={{ flex: 1 }}>
       {showExploreHome ? (
         <MainMapScreen
           onExit={() => {
@@ -400,10 +335,10 @@ export default function App() {
         />
       ) : !showAuth ? (
         <WelcomeScreen onContinue={() => setShowAuth(true)} />
-      ) : authRoute === 'login' ? (
+      ) : visibleAuthRoute === 'login' ? (
         <LoginScreen
           onGoSignup={() => setAuthRoute('signup')}
-          onEmailPress={() => setEmailAuthPanel('login')}
+          onEmailPress={() => openEmailAuthPanel('login')}
           onTemporaryMainMapPress={() => {
             setShowExploreHome(true);
             setShowAuth(false);
@@ -427,9 +362,88 @@ export default function App() {
         <SignupScreen
           onGoLogin={() => setAuthRoute('login')}
           onApplePress={() => setShowAgentOnboarding(true)}
-          onEmailPress={() => setEmailAuthPanel('signup')}
+          onEmailPress={() => openEmailAuthPanel('signup')}
         />
       )}
+      <EmailAuthModal
+        visible={emailAuthOverlayOpen}
+        activePanel={emailAuthPanel}
+        onRequestClose={() => {
+          if (blockEmailAuthClose) return;
+          setEmailAuthPanel(null);
+          setForgotPrefillEmail('');
+        }}
+        onAfterClose={handleEmailAuthAfterClose}
+        panelSignup={
+          <EmailSignupFlow
+            visible={false}
+            onHardwareCloseBlockedChange={setBlockEmailAuthClose}
+            onClose={() => setEmailAuthPanel(null)}
+            onSwitchToLogin={() => {
+              setAuthRoute('login');
+              setEmailAuthPanel('login');
+            }}
+            onFinished={() => {
+              setEmailAuthPanel(null);
+              setShowAuth(false);
+              setShowAgentOnboarding(false);
+              setShowAgentProfileOnboarding(false);
+              setShowPersonalOnboarding(false);
+              setShowPersonalOnboardingTwo(false);
+              setShowPersonalOnboardingThree(false);
+              setShowPersonalOnboardingFour(false);
+              setShowPersonalOnboardingFive(false);
+              setShowPersonalOnboardingSix(false);
+              setShowPersonalOnboardingSeven(false);
+              setShowPersonalOnboardingEight(false);
+              setShowExploreHome(true);
+            }}
+          />
+        }
+        panelLogin={
+          <EmailLoginFlow
+            visible={false}
+            onClose={() => setEmailAuthPanel(null)}
+            onSwitchToSignup={() => {
+              setAuthRoute('signup');
+              setEmailAuthPanel('signup');
+            }}
+            onLoggedIn={() => {
+              setEmailAuthPanel(null);
+              setShowAuth(false);
+              setShowAgentOnboarding(false);
+              setShowAgentProfileOnboarding(false);
+              setShowPersonalOnboarding(false);
+              setShowPersonalOnboardingTwo(false);
+              setShowPersonalOnboardingThree(false);
+              setShowPersonalOnboardingFour(false);
+              setShowPersonalOnboardingFive(false);
+              setShowPersonalOnboardingSix(false);
+              setShowPersonalOnboardingSeven(false);
+              setShowPersonalOnboardingEight(false);
+              setShowExploreHome(true);
+            }}
+            onForgotPasswordPress={(emailFromLogin) => {
+              setForgotPrefillEmail(emailFromLogin);
+              setEmailAuthPanel('forgot');
+            }}
+          />
+        }
+        panelForgot={
+          <ForgotPasswordFlow
+            visible={false}
+            initialEmail={forgotPrefillEmail}
+            onHardwareCloseBlockedChange={setBlockEmailAuthClose}
+            onClose={() => {
+              setEmailAuthPanel('login');
+            }}
+            onFinished={() => {
+              setEmailAuthPanel('login');
+            }}
+          />
+        }
+      />
+      </View>
     </SafeAreaProvider>
   );
 }
