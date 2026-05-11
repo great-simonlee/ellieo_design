@@ -8,6 +8,8 @@ type LoginScreenProps = {
   onGooglePress: () => void;
   onApplePress: () => void;
   onEmailPress?: () => void;
+  /** Design-only: top-right shortcut to main map. */
+  onTemporaryMainMapPress?: () => void;
 };
 
 export function LoginScreen({
@@ -15,6 +17,7 @@ export function LoginScreen({
   onGooglePress,
   onApplePress,
   onEmailPress,
+  onTemporaryMainMapPress,
 }: LoginScreenProps) {
   const L = useAuthLayout();
 
@@ -24,6 +27,7 @@ export function LoginScreen({
       onGooglePress={onGooglePress}
       onApplePress={onApplePress}
       onEmailPress={onEmailPress}
+      onTemporaryMainMapPress={onTemporaryMainMapPress}
       welcome={
         <View style={authStyles.welcomeBlock}>
           <Text

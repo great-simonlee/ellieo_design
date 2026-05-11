@@ -30,7 +30,11 @@ const verifyInk = '#1C1C1C';
 const sheetBg = '#ffffff';
 const line = '#E2E7EF';
 const danger = '#DC2626';
+const SUCCESS_GREEN = '#16A34A';
 const OTP_LEN = 6;
+const RESET_SUCCESS_MS = 2000;
+/** Success sheet height (~same feel as signup verified card). */
+const RESET_SUCCESS_SHEET_MIN_H_RATIO = 2 / 3;
 
 /** Extra space below Reset password when the keyboard is up (scroll runway; between 1.5× and 3× base). */
 const RESET_PW_KEYBOARD_BOTTOM_GAP = (space.xxxl + space.xl) * 2.5;
@@ -38,13 +42,15 @@ const RESET_PW_KEYBOARD_BOTTOM_GAP = (space.xxxl + space.xl) * 2.5;
 export type ForgotPasswordFlowProps = {
   visible: boolean;
   onClose: () => void;
-  /** After successful reset (design-only). Parent typically re-opens login. */
+  /** After success message (~2s). Parent typically opens Log in with Email. */
   onFinished?: () => void;
+  /** When true, shared `EmailAuthModal` ignores hardware back (success sheet). */
+  onHardwareCloseBlockedChange?: (blocked: boolean) => void;
   /** Prefilled when user taps Forgot from email login with text in the email field. */
   initialEmail?: string;
 };
 
-type Step = 'email' | 'code' | 'newPassword';
+type Step = 'email' | 'code' | 'newPassword' | 'resetSuccess';
 
 /**
  * Match RN KeyboardAvoidingView: animate layout with the system keyboard so
@@ -86,6 +92,7 @@ export function ForgotPasswordFlow({
   visible,
   onClose,
   onFinished,
+  onHardwareCloseBlockedChange,
   initialEmail,
 }: ForgotPasswordFlowProps) {
   const insets = useSafeAreaInsets();
@@ -107,10 +114,7 @@ export function ForgotPasswordFlow({
   /** Prevent tall sheets + keyboard from pushing the header under the notch / status bar. */
   const maxSheetWhenKeyboard = useMemo(() => {
     if (keyboardInset <= 0) return undefined;
-    return Math.max(
-      260,
-      windowH - keyboardInset - insets.top - space.sm,
-    );
+    return Math.max(260, windowH - keyboardInset - insets.top - space.sm);
   }, [keyboardInset, windowH, insets.top]);
 
   const codeInputRef = useRef<TextInput>(null);
@@ -118,8 +122,7 @@ export function ForgotPasswordFlow({
 
   /** Scroll tall new-password content so confirm + CTA stay above the keyboard. */
   const scrollNewPasswordToBottom = useCallback(() => {
-    const run = () =>
-      sheetScrollRef.current?.scrollToEnd({ animated: true });
+    const run = () => sheetScrollRef.current?.scrollToEnd({ animated: true });
     requestAnimationFrame(() => {
       requestAnimationFrame(run);
     });
@@ -156,6 +159,23 @@ export function ForgotPasswordFlow({
   }, [visible, initialEmail]);
 
   useEffect(() => {
+    if (!visible) {
+      onHardwareCloseBlockedChange?.(false);
+      return;
+    }
+    onHardwareCloseBlockedChange?.(step === 'resetSuccess');
+  }, [visible, step, onHardwareCloseBlockedChange]);
+
+  useEffect(() => {
+    if (!visible || step !== 'resetSuccess') return;
+    Keyboard.dismiss();
+    const t = setTimeout(() => {
+      onFinished?.();
+    }, RESET_SUCCESS_MS);
+    return () => clearTimeout(t);
+  }, [visible, step, onFinished]);
+
+  useEffect(() => {
     const showEvt =
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvt =
@@ -189,13 +209,7 @@ export function ForgotPasswordFlow({
     const delay = Platform.OS === 'ios' ? 280 : 120;
     const id = setTimeout(scrollNewPasswordToBottom, delay);
     return () => clearTimeout(id);
-  }, [
-    keyboardInset,
-    focusedField,
-    step,
-    visible,
-    scrollNewPasswordToBottom,
-  ]);
+  }, [keyboardInset, focusedField, step, visible, scrollNewPasswordToBottom]);
 
   const sendCode = () => {
     if (!emailOk) return;
@@ -216,10 +230,11 @@ export function ForgotPasswordFlow({
   const submitNewPassword = () => {
     if (!canReset) return;
     Keyboard.dismiss();
-    onFinished?.();
+    setStep('resetSuccess');
   };
 
   const goBack = () => {
+    if (step === 'resetSuccess') return;
     Keyboard.dismiss();
     if (step === 'code') setStep('email');
     else if (step === 'newPassword') setStep('code');
@@ -230,7 +245,9 @@ export function ForgotPasswordFlow({
       ? 'Reset password'
       : step === 'code'
         ? 'Check your email'
-        : 'Create new password';
+        : step === 'resetSuccess'
+          ? 'Password updated'
+          : 'Create new password';
 
   if (!visible) {
     return null;
@@ -248,35 +265,44 @@ export function ForgotPasswordFlow({
           <View
             style={[
               styles.sheet,
-              maxSheetWhenKeyboard != null && {
-                maxHeight: maxSheetWhenKeyboard,
+              maxSheetWhenKeyboard != null &&
+                step !== 'resetSuccess' && {
+                  maxHeight: maxSheetWhenKeyboard,
+                },
+              step === 'resetSuccess' && {
+                minHeight: Math.round(
+                  windowH * RESET_SUCCESS_SHEET_MIN_H_RATIO,
+                ),
               },
             ]}
           >
-              <View style={styles.sheetGrab}>
-                <View style={styles.grabPill} />
-              </View>
+            <View style={styles.sheetGrab}>
+              <View style={styles.grabPill} />
+            </View>
 
-              <View style={styles.sheetHeader}>
-                {step === 'email' ? (
-                  <View style={styles.iconBtn} />
-                ) : (
-                  <Pressable
-                    accessibilityRole='button'
-                    accessibilityLabel='Back'
-                    hitSlop={12}
-                    onPress={goBack}
-                    style={({ pressed }) => [
-                      styles.iconBtn,
-                      pressed && { opacity: 0.7 },
-                    ]}
-                  >
-                    <Ionicons name='chevron-back' size={24} color={ink} />
-                  </Pressable>
-                )}
-                <Text style={styles.sheetTitle} accessibilityRole='header'>
-                  {sheetTitle}
-                </Text>
+            <View style={styles.sheetHeader}>
+              {step === 'email' || step === 'resetSuccess' ? (
+                <View style={styles.iconBtn} />
+              ) : (
+                <Pressable
+                  accessibilityRole='button'
+                  accessibilityLabel='Back'
+                  hitSlop={12}
+                  onPress={goBack}
+                  style={({ pressed }) => [
+                    styles.iconBtn,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <Ionicons name='chevron-back' size={24} color={ink} />
+                </Pressable>
+              )}
+              <Text style={styles.sheetTitle} accessibilityRole='header'>
+                {sheetTitle}
+              </Text>
+              {step === 'resetSuccess' ? (
+                <View style={styles.iconBtn} />
+              ) : (
                 <Pressable
                   accessibilityRole='button'
                   accessibilityLabel='Close'
@@ -289,40 +315,61 @@ export function ForgotPasswordFlow({
                 >
                   <Ionicons name='close' size={26} color={ink} />
                 </Pressable>
-              </View>
+              )}
+            </View>
 
+            {step === 'resetSuccess' ? null : (
               <LinearGradient
                 colors={['#93C5FD', colors.primary, '#1D4ED8']}
                 start={{ x: 0, y: 0.5 }}
                 end={{ x: 1, y: 0.5 }}
                 style={styles.titleAccentBar}
               />
+            )}
 
-              {step === 'email' ? (
-                <Text style={styles.intro}>
-                  Enter the email for your account. We&apos;ll send a code to
-                  verify it&apos;s you.
-                </Text>
-              ) : null}
+            {step === 'email' ? (
+              <Text style={styles.intro}>
+                Enter the email for your account. We&apos;ll send a code to
+                verify it&apos;s you.
+              </Text>
+            ) : null}
 
-              <View
-                style={[
-                  styles.sheetMain,
-                  keyboardInset > 0 && styles.sheetMainKeyboard,
-                ]}
-              >
+            <View
+              style={[
+                styles.sheetMain,
+                keyboardInset > 0 &&
+                  step !== 'resetSuccess' &&
+                  styles.sheetMainKeyboard,
+                step === 'resetSuccess' && styles.sheetMainResetSuccess,
+              ]}
+            >
+              {step === 'resetSuccess' ? (
+                <View
+                  style={styles.resetSuccessBody}
+                  accessibilityLiveRegion='polite'
+                >
+                  <Ionicons
+                    name='checkmark-circle'
+                    size={72}
+                    color={SUCCESS_GREEN}
+                  />
+                  <Text
+                    style={styles.resetSuccessMessage}
+                    accessibilityRole='header'
+                  >
+                    Your password has been reset. You can log in with your new
+                    password.
+                  </Text>
+                </View>
+              ) : (
                 <ScrollView
                   ref={sheetScrollRef}
-                  style={
-                    keyboardInset > 0 ? styles.scrollFlexKb : undefined
-                  }
+                  style={keyboardInset > 0 ? styles.scrollFlexKb : undefined}
                   contentContainerStyle={[
                     styles.scrollContent,
                     {
                       paddingBottom:
-                        keyboardInset > 0
-                          ? space.md
-                          : Math.round(space.md / 2),
+                        keyboardInset > 0 ? space.md : Math.round(space.md / 2),
                     },
                   ]}
                   keyboardShouldPersistTaps='handled'
@@ -353,9 +400,7 @@ export function ForgotPasswordFlow({
                         onPress={sendCode}
                         disabled={!emailOk}
                         padH={0}
-                        safeBottomInset={
-                          keyboardInset > 0 ? 0 : insets.bottom
-                        }
+                        safeBottomInset={keyboardInset > 0 ? 0 : insets.bottom}
                         buttonWidth={primaryButtonWidth}
                         dockBottomGap={0}
                         dockPaddingTop={space.lg}
@@ -427,9 +472,7 @@ export function ForgotPasswordFlow({
                         onPress={continueAfterCode}
                         disabled={code.length !== OTP_LEN}
                         padH={0}
-                        safeBottomInset={
-                          keyboardInset > 0 ? 0 : insets.bottom
-                        }
+                        safeBottomInset={keyboardInset > 0 ? 0 : insets.bottom}
                         buttonWidth={primaryButtonWidth}
                         dockBottomGap={0}
                         dockPaddingTop={space.lg}
@@ -515,24 +558,21 @@ export function ForgotPasswordFlow({
                         onPress={submitNewPassword}
                         disabled={!canReset}
                         padH={0}
-                        safeBottomInset={
-                          keyboardInset > 0 ? 0 : insets.bottom
-                        }
+                        safeBottomInset={keyboardInset > 0 ? 0 : insets.bottom}
                         buttonWidth={primaryButtonWidth}
                         dockBottomGap={
-                          keyboardInset > 0
-                            ? RESET_PW_KEYBOARD_BOTTOM_GAP
-                            : 0
+                          keyboardInset > 0 ? RESET_PW_KEYBOARD_BOTTOM_GAP : 0
                         }
                         dockPaddingTop={space.lg}
                       />
                     </>
                   )}
                 </ScrollView>
-              </View>
+              )}
             </View>
           </View>
         </View>
+      </View>
     </View>
   );
 }
@@ -635,6 +675,28 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
     backgroundColor: sheetBg,
+  },
+  sheetMainResetSuccess: {
+    flex: 1,
+    alignSelf: 'stretch',
+    minHeight: 0,
+  },
+  resetSuccessBody: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: space.xxl,
+    paddingHorizontal: space.lg,
+  },
+  resetSuccessMessage: {
+    marginTop: space.lg,
+    fontSize: type.title,
+    fontWeight: '700',
+    color: ink,
+    textAlign: 'center',
+    letterSpacing: -0.4,
+    lineHeight: 26,
   },
   scrollContent: {
     flexGrow: 0,

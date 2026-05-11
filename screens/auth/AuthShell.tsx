@@ -1,12 +1,23 @@
 import { BlurView } from 'expo-blur';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  cloneElement,
+  isValidElement,
+  ReactElement,
+  ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Animated,
   Easing,
   Image,
   ImageBackground,
+  Platform,
   Pressable,
   Text,
   View,
@@ -30,6 +41,8 @@ export type AuthShellProps = {
   onApplePress?: () => void;
   /** Login / sign-up: email modal is wired by the parent (signup vs login). */
   onEmailPress?: () => void;
+  /** Design-only: LoginScreen — jump to main map without signing in. */
+  onTemporaryMainMapPress?: () => void;
 };
 
 export function AuthShell({
@@ -39,12 +52,30 @@ export function AuthShell({
   onGooglePress,
   onApplePress,
   onEmailPress,
+  onTemporaryMainMapPress,
 }: AuthShellProps) {
   const insets = useSafeAreaInsets();
   const L = useAuthLayout();
   const [mode, setMode] = useState<LoginMode>('personal');
+  /**
+   * Mock: top-left control is visible on all platforms so login/signup can be designed on iOS sim.
+   * Default: Android hides the Apple row (shorter sheet); iOS shows it. Toggle flips on both.
+   */
+  const [appleRowVisible, setAppleRowVisible] = useState(
+    Platform.OS !== 'android',
+  );
   const isPersonal = mode === 'personal';
   const toggleAnim = useRef(new Animated.Value(0)).current;
+
+  const showAppleRow = Boolean(onApplePress) && appleRowVisible;
+
+  const footerInCluster = useMemo(() => {
+    if (!isValidElement(footer)) return footer;
+    const el = footer as ReactElement<{ style?: unknown }>;
+    return cloneElement(el, {
+      style: [el.props.style, styles.joinLineInCluster],
+    });
+  }, [footer]);
 
   useEffect(() => {
     Animated.timing(toggleAnim, {
@@ -68,9 +99,73 @@ export function AuthShell({
   const appleLabel = `${actionVerb} with Apple`;
   const emailLabel = `${actionVerb} with Email`;
 
+  /** Same enabled gradient as `OnboardingBottomCta` (Personal onboarding “I Agree”). */
+  const primaryCtaGradient: [string, string] = ['#7BA6FF', colors.primary];
+
   return (
     <View style={styles.authRoot}>
       <StatusBar style='dark' />
+      {onApplePress ? (
+        <Pressable
+          accessibilityRole='button'
+          accessibilityLabel={
+            appleRowVisible
+              ? 'Hide Sign in with Apple'
+              : 'Show Sign in with Apple'
+          }
+          accessibilityHint='Design-only mock toggle'
+          accessibilityState={{ selected: appleRowVisible }}
+          onPress={() => setAppleRowVisible((v) => !v)}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.androidAppleToggleOuter,
+            appleRowVisible && styles.androidAppleToggleOuterActive,
+            {
+              top: insets.top + space.sm,
+              left: L.horizontalInset,
+            },
+            pressed && styles.androidAppleTogglePressed,
+          ]}
+        >
+          <Ionicons
+            name='logo-apple'
+            size={22}
+            color={appleRowVisible ? colors.primary : '#64748b'}
+          />
+        </Pressable>
+      ) : null}
+      {onTemporaryMainMapPress ? (
+        <Pressable
+          accessibilityRole='button'
+          accessibilityLabel='Open main map (temporary preview)'
+          onPress={onTemporaryMainMapPress}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.tempMainMapFabOuter,
+            {
+              top: insets.top + space.sm,
+              right: L.horizontalInset,
+            },
+            pressed && styles.tempMainMapFabPressed,
+          ]}
+        >
+          <View style={styles.tempMainMapFabFace}>
+            <LinearGradient
+              colors={primaryCtaGradient}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={styles.tempMainMapFabGradient}
+            >
+              <Image
+                accessibilityIgnoresInvertColors
+                source={require('../../assets/img/white_logo.png')}
+                style={styles.tempMainMapFabLogo}
+                resizeMode='contain'
+              />
+            </LinearGradient>
+          </View>
+        </Pressable>
+      ) : null}
       <ImageBackground
         source={
           isPersonal
@@ -186,36 +281,38 @@ export function AuthShell({
       >
         <View
           style={[
-            styles.sheetBody,
+            styles.sheetBodyCentered,
             { paddingBottom: insets.bottom + space.md },
           ]}
         >
-          <View
-            style={[
-              styles.authMain,
-              {
-                flex: 1,
-                minHeight: 0,
-                maxWidth: L.contentMaxWidth,
-                alignSelf: 'center',
-                marginBottom: Math.round(space.lg * Math.min(L.scale, 1.02)),
-              },
-            ]}
-          >
-            <View style={styles.brandBlock}>
+          <View style={[styles.authSheetCluster, { maxWidth: L.contentMaxWidth }]}>
+            <View
+              style={[
+                styles.authMain,
+                styles.authMainCompact,
+                {
+                  maxWidth: L.contentMaxWidth,
+                  alignSelf: 'center',
+                  marginBottom: L.gapActionsToFooter,
+                },
+              ]}
+            >
+            <View style={[styles.brandBlock, { marginBottom: L.gapLogoToWelcome }]}>
               <Image
                 accessibilityRole='image'
                 accessibilityLabel='Ellieo'
                 source={require('../../assets/img/ellieo_logo_hori.png')}
                 style={[
                   styles.brandLogoHori,
-                  { width: L.brandHoriW, height: L.brandHoriH },
+                  { width: L.brandHoriW, height: L.brandHoriH, alignSelf: 'center' },
                 ]}
                 resizeMode='contain'
               />
             </View>
 
-            <View style={styles.welcomeRail}>{welcome}</View>
+            <View style={[styles.welcomeRail, { paddingBottom: L.gapWelcomeToActions }]}>
+              {welcome}
+            </View>
 
             <View
               style={[
@@ -272,51 +369,53 @@ export function AuthShell({
                   </View>
                 </Pressable>
 
-                <Pressable
-                  accessibilityRole='button'
-                  accessibilityLabel={appleLabel}
-                  onPress={() => onApplePress?.()}
-                  style={({ pressed }) => [
-                    styles.loginBtn,
-                    styles.loginBtnApple,
-                    {
-                      minHeight: L.loginBtnMinHeight,
-                      paddingVertical: L.loginBtnPadV,
-                    },
-                    pressed && styles.loginBtnPressed,
-                  ]}
-                >
-                  <View style={styles.loginBtnRow}>
-                    <View
-                      style={[
-                        styles.loginBtnIconSlot,
-                        { width: L.loginIconSlotW },
-                      ]}
-                    >
-                      <Ionicons
-                        name='logo-apple'
-                        size={L.iconSize + 1}
-                        color='#ffffff'
+                {showAppleRow ? (
+                  <Pressable
+                    accessibilityRole='button'
+                    accessibilityLabel={appleLabel}
+                    onPress={() => onApplePress?.()}
+                    style={({ pressed }) => [
+                      styles.loginBtn,
+                      styles.loginBtnApple,
+                      {
+                        minHeight: L.loginBtnMinHeight,
+                        paddingVertical: L.loginBtnPadV,
+                      },
+                      pressed && styles.loginBtnPressed,
+                    ]}
+                  >
+                    <View style={styles.loginBtnRow}>
+                      <View
+                        style={[
+                          styles.loginBtnIconSlot,
+                          { width: L.loginIconSlotW },
+                        ]}
+                      >
+                        <Ionicons
+                          name='logo-apple'
+                          size={L.iconSize + 1}
+                          color='#ffffff'
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.loginBtnText,
+                          styles.loginBtnTextLight,
+                          styles.loginBtnLabel,
+                          { fontSize: L.loginBtnFontSize },
+                        ]}
+                      >
+                        {appleLabel}
+                      </Text>
+                      <View
+                        style={[
+                          styles.loginBtnIconSlot,
+                          { width: L.loginIconSlotW },
+                        ]}
                       />
                     </View>
-                    <Text
-                      style={[
-                        styles.loginBtnText,
-                        styles.loginBtnTextLight,
-                        styles.loginBtnLabel,
-                        { fontSize: L.loginBtnFontSize },
-                      ]}
-                    >
-                      {appleLabel}
-                    </Text>
-                    <View
-                      style={[
-                        styles.loginBtnIconSlot,
-                        { width: L.loginIconSlotW },
-                      ]}
-                    />
-                  </View>
-                </Pressable>
+                  </Pressable>
+                ) : null}
 
                 <Pressable
                   accessibilityRole='button'
@@ -367,14 +466,16 @@ export function AuthShell({
             </View>
           </View>
 
-          {footer}
-
-          <Text style={styles.disclaimer}>
-            Ellieo may share your email address with third party vendors in
-            order to communicate with you about cash back offers and app
-            changes. By creating an account, you accept our Terms of Use and
-            Privacy Policy.
-          </Text>
+            <View style={styles.sheetFooterCluster}>
+              {footerInCluster}
+              <Text style={[styles.disclaimerText, styles.disclaimerInCluster]}>
+                Ellieo may share your email address with third party vendors in
+                order to communicate with you about cash back offers and app
+                changes. By creating an account, you accept our Terms of Use and
+                Privacy Policy.
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
     </View>

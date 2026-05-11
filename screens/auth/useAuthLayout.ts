@@ -50,8 +50,8 @@ export function useAuthLayout() {
     const gapLoginCol = Math.round(space.sm + 4);
     const loginActionsPadH = Math.round(space.md * Math.min(scale, 1.05));
     const loginActionsPadV = Math.max(
-      space.md,
-      Math.round(space.md + space.sm * Math.min(scale, 1.05)),
+      space.sm + space.xs,
+      Math.round(space.md + space.xs * Math.min(scale, 1.05)),
     );
     const modeLabelSize = Math.max(12, Math.round(13 * scale));
     const modePillPadV = Math.max(6, Math.round(7 * scale));
@@ -67,6 +67,11 @@ export function useAuthLayout() {
       ),
     );
     const welcomeLineHeight = Math.round(23 * Math.min(scale, 1.08));
+
+    /** Tight, even rhythm — whole block is vertically centered in the sheet. */
+    const gapLogoToWelcome = Math.round(space.md + space.sm * Math.min(scale, 1.05));
+    const gapWelcomeToActions = Math.round(space.lg * Math.min(scale, 1.05));
+    const gapActionsToFooter = Math.round(space.md + space.xs * Math.min(scale, 1.05));
 
     return {
       scale,
@@ -101,6 +106,9 @@ export function useAuthLayout() {
       loginBtnFontSize,
       welcomeFontSize,
       welcomeLineHeight,
+      gapLogoToWelcome,
+      gapWelcomeToActions,
+      gapActionsToFooter,
     };
   }, [screenW, screenH]);
 }

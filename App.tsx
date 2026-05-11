@@ -11,7 +11,7 @@ import { LoadingScreen } from './screens/LoadingScreen';
 import { PersonalOnboardingScreen } from './screens/PersonalOnboardingScreen';
 import { PersonalOnboardingScreenFive } from './screens/PersonalOnboardingScreenFive';
 import { PersonalOnboardingScreenFour } from './screens/PersonalOnboardingScreenFour';
-import { MockRealEstateMapScreen } from './screens/MockRealEstateMapScreen';
+import { MainMapScreen } from './screens/MainMapScreen';
 import { PersonalOnboardingScreenEight } from './screens/PersonalOnboardingScreenEight';
 import { PersonalOnboardingScreenSeven } from './screens/PersonalOnboardingScreenSeven';
 import { PersonalOnboardingScreenSix } from './screens/PersonalOnboardingScreenSix';
@@ -192,6 +192,7 @@ export default function App() {
           <ForgotPasswordFlow
             visible={false}
             initialEmail={forgotPrefillEmail}
+            onHardwareCloseBlockedChange={setBlockEmailAuthClose}
             onClose={() => {
               setEmailAuthPanel('login');
             }}
@@ -202,7 +203,7 @@ export default function App() {
         }
       />
       {showExploreHome ? (
-        <MockRealEstateMapScreen
+        <MainMapScreen
           onExit={() => {
             setShowExploreHome(false);
             setShowAuth(false);
@@ -403,6 +404,10 @@ export default function App() {
         <LoginScreen
           onGoSignup={() => setAuthRoute('signup')}
           onEmailPress={() => setEmailAuthPanel('login')}
+          onTemporaryMainMapPress={() => {
+            setShowExploreHome(true);
+            setShowAuth(false);
+          }}
           onGooglePress={() => {
             setShowAgentOnboarding(false);
             setShowAgentProfileOnboarding(false);
