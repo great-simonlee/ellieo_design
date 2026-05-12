@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import {
   Image,
@@ -14,12 +15,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useOnboardingCtaLayout } from '../design/onboardingCtaLayout';
 import { colors, radius, space, type } from '../design/theme';
 
-const ink = '#1C1C1E';
-const muted = '#636366';
-const pageBg = '#FFFFFF';
-const cardBorder = 'rgba(60,60,67,0.08)';
+const ink = '#111827';
+const muted = '#687084';
+const pageBg = '#F5F7FF';
+const softInk = '#354052';
+const cardBorder = 'rgba(31,41,55,0.08)';
+const white = '#FFFFFF';
 
 type ListingStatus = 'Live' | 'Draft' | 'Attention';
+type RoommateProfile = {
+  id: string;
+  name: string;
+  image: ImageSourcePropType;
+};
+
 type Listing = {
   id: string;
   title: string;
@@ -34,8 +43,7 @@ type Listing = {
   views: string;
   leads: number;
   saved: number;
-  roommates: string;
-  nextMove: string;
+  roommates: RoommateProfile[];
   image: ImageSourcePropType;
 };
 
@@ -55,8 +63,18 @@ const LISTINGS: Listing[] = [
     views: '1.8K',
     leads: 22,
     saved: 103,
-    roommates: '2 roommates linked',
-    nextMove: 'Strong demand. Keep Boost on tonight.',
+    roommates: [
+      {
+        id: 'maya',
+        name: 'Maya',
+        image: require('../assets/img/user_banner.png'),
+      },
+      {
+        id: 'jules',
+        name: 'Jules',
+        image: require('../assets/img/personal_onboarding.png'),
+      },
+    ],
     image: require('../assets/img/agent_banner.png'),
   },
   {
@@ -73,8 +91,13 @@ const LISTINGS: Listing[] = [
     views: '1.2K',
     leads: 18,
     saved: 84,
-    roommates: '1 roommate linked',
-    nextMove: 'Add a roommate intro to increase trust.',
+    roommates: [
+      {
+        id: 'nora',
+        name: 'Nora',
+        image: require('../assets/img/agent_onboarding.png'),
+      },
+    ],
     image: require('../assets/img/banner1.png'),
   },
   {
@@ -91,8 +114,7 @@ const LISTINGS: Listing[] = [
     views: '394',
     leads: 4,
     saved: 19,
-    roommates: 'No roommate yet',
-    nextMove: 'Verify address before the next publish window.',
+    roommates: [],
     image: require('../assets/img/user_banner.png'),
   },
   {
@@ -109,8 +131,7 @@ const LISTINGS: Listing[] = [
     views: '-',
     leads: 0,
     saved: 0,
-    roommates: 'Draft setup',
-    nextMove: 'Finish pricing and house rules.',
+    roommates: [],
     image: require('../assets/img/personal_onboarding.png'),
   },
 ];
@@ -132,9 +153,9 @@ export function YourListingsScreen({ onBack }: YourListingsScreenProps) {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: insets.top + space.sm,
+            paddingTop: insets.top + space.md,
             paddingHorizontal: padH,
-            paddingBottom: insets.bottom + 118,
+            paddingBottom: insets.bottom + 140,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -150,19 +171,19 @@ export function YourListingsScreen({ onBack }: YourListingsScreenProps) {
               pressed && styles.headerButtonPressed,
             ]}
           >
-            <Ionicons name='arrow-back' size={24} color={ink} />
+            <Ionicons name='arrow-back' size={22} color={ink} />
           </Pressable>
 
-        </View>
-
-        <View style={styles.titleBlock}>
-          <Text style={styles.eyebrow}>Your listings</Text>
-          <Text style={styles.title}>Manage your rooms</Text>
+          <View style={styles.headerPill}>
+            <Text style={styles.headerPillText}>{LISTINGS.length} listings</Text>
+          </View>
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>All listings</Text>
-          <Text style={styles.sectionMeta}>{LISTINGS.length} total</Text>
+          <View>
+            <Text style={styles.sectionKicker}>Portfolio</Text>
+            <Text style={styles.sectionTitle}>Your listings</Text>
+          </View>
         </View>
 
         <View style={styles.listStack}>
@@ -176,17 +197,28 @@ export function YourListingsScreen({ onBack }: YourListingsScreenProps) {
         pointerEvents='box-none'
         style={[styles.bottomCtaWrap, { paddingBottom: insets.bottom + space.md }]}
       >
+        <LinearGradient
+          colors={['rgba(245,247,255,0)', 'rgba(245,247,255,0.98)']}
+          style={styles.bottomCtaFade}
+        />
         <Pressable
           accessibilityRole='button'
           accessibilityLabel='Create a new listing'
           style={({ pressed }) => [
-            styles.createButton,
+            styles.createButtonShell,
             { width: primaryButtonWidth },
             pressed && styles.createButtonPressed,
           ]}
         >
-          <Ionicons name='add' size={22} color='#FFFFFF' />
-          <Text style={styles.createButtonText}>Create a new listing</Text>
+          <LinearGradient
+            colors={[colors.primary, '#7057FF']}
+            end={{ x: 1, y: 1 }}
+            start={{ x: 0, y: 0 }}
+            style={styles.createButton}
+          >
+            <Ionicons name='add' size={22} color='#FFFFFF' />
+            <Text style={styles.createButtonText}>Create a new listing</Text>
+          </LinearGradient>
         </Pressable>
       </View>
     </View>
@@ -194,10 +226,15 @@ export function YourListingsScreen({ onBack }: YourListingsScreenProps) {
 }
 
 function ListingRow({ listing }: { listing: Listing }) {
+  const tone = getListingTone(listing.status);
+
   return (
     <View style={styles.listingCard}>
+      <View style={[styles.listingAccent, { backgroundColor: tone.accent }]} />
       <View style={styles.listingTop}>
-        <Image source={listing.image} resizeMode='cover' style={styles.thumbnail} />
+        <View style={styles.thumbnailWrap}>
+          <Image source={listing.image} resizeMode='cover' style={styles.thumbnail} />
+        </View>
 
         <View style={styles.listingMain}>
           <View style={styles.listingTitleBlock}>
@@ -235,21 +272,50 @@ function ListingRow({ listing }: { listing: Listing }) {
         </View>
       </View>
 
-      <View style={styles.roommateStrip}>
-        <View style={styles.roommateIcon}>
-          <Ionicons name='people-outline' size={17} color={ink} />
-        </View>
-        <Text style={styles.roommateText} numberOfLines={1}>
-          {listing.roommates}
-        </Text>
-        <Ionicons name='chevron-forward' size={18} color='rgba(60,60,67,0.42)' />
-      </View>
+      <RoommateStrip roommates={listing.roommates} />
 
       <View style={styles.actionsRow}>
         <ActionButton label='Delete' icon='trash-outline' />
         <ActionButton label='Edit' icon='create-outline' />
         <ActionButton label='Boost' icon='rocket-outline' primary />
       </View>
+    </View>
+  );
+}
+
+function RoommateStrip({ roommates }: { roommates: RoommateProfile[] }) {
+  const hasRoommates = roommates.length > 0;
+  const roommateNames = roommates.map((roommate) => roommate.name).join(', ');
+
+  return (
+    <View style={styles.roommateStrip}>
+      {hasRoommates ? (
+        <View style={styles.roommateAvatarStack}>
+          {roommates.slice(0, 3).map((roommate, index) => (
+            <Image
+              key={roommate.id}
+              source={roommate.image}
+              resizeMode='cover'
+              style={[
+                styles.roommateAvatar,
+                index > 0 && styles.roommateAvatarOverlap,
+              ]}
+            />
+          ))}
+        </View>
+      ) : (
+        <View style={styles.roommateEmptyIcon}>
+          <Ionicons name='person-add-outline' size={17} color={colors.primary} />
+        </View>
+      )}
+
+      <Text
+        style={[styles.roommateText, !hasRoommates && styles.roommateTextEmpty]}
+        numberOfLines={1}
+      >
+        {hasRoommates ? roommateNames : 'No Roommate Added Yet'}
+      </Text>
+      <Ionicons name='chevron-forward' size={18} color='rgba(60,60,67,0.42)' />
     </View>
   );
 }
@@ -263,6 +329,24 @@ function Signal({ value, label }: { value: string; label: string }) {
   );
 }
 
+function getListingTone(status: ListingStatus): { accent: string } {
+  if (status === 'Attention') {
+    return {
+      accent: '#F59E0B',
+    };
+  }
+
+  if (status === 'Draft') {
+    return {
+      accent: '#7C3AED',
+    };
+  }
+
+  return {
+    accent: colors.primary,
+  };
+}
+
 function ActionButton({
   label,
   icon,
@@ -272,6 +356,34 @@ function ActionButton({
   icon: keyof typeof Ionicons.glyphMap;
   primary?: boolean;
 }) {
+  const iconName = primary && icon === 'rocket-outline' ? 'rocket' : icon;
+
+  if (primary) {
+    return (
+      <Pressable
+        accessibilityRole='button'
+        accessibilityLabel={label}
+        style={({ pressed }) => [
+          styles.actionButton,
+          styles.actionButtonPrimary,
+          pressed && styles.actionButtonPressed,
+        ]}
+      >
+        <LinearGradient
+          colors={[colors.primary, '#6D5DF6']}
+          end={{ x: 1, y: 1 }}
+          start={{ x: 0, y: 0 }}
+          style={styles.boostButtonSurface}
+        >
+          <View style={styles.boostIconWrap}>
+            <Ionicons name={iconName} size={17} color={white} />
+          </View>
+          <Text style={[styles.actionText, styles.actionTextPrimary]}>{label}</Text>
+        </LinearGradient>
+      </Pressable>
+    );
+  }
+
   return (
     <Pressable
       accessibilityRole='button'
@@ -282,10 +394,8 @@ function ActionButton({
         pressed && styles.actionButtonPressed,
       ]}
     >
-      <Ionicons name={icon} size={17} color={primary ? colors.primary : ink} />
-      <Text style={[styles.actionText, primary && styles.actionTextPrimary]}>
-        {label}
-      </Text>
+      <Ionicons name={iconName} size={17} color={ink} />
+      <Text style={styles.actionText}>{label}</Text>
     </Pressable>
   );
 }
@@ -299,7 +409,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    gap: space.lg,
+    gap: space.md,
   },
   header: {
     minHeight: 48,
@@ -313,33 +423,52 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.08,
+        shadowRadius: 18,
+      },
+      android: { elevation: 2 },
+    }),
   },
   headerButtonPressed: {
-    backgroundColor: '#ECEFF5',
+    opacity: 0.7,
   },
-  titleBlock: {
-    gap: space.xs,
+  headerPill: {
+    minHeight: 38,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
   },
-  eyebrow: {
+  headerPillText: {
+    fontSize: type.caption,
+    lineHeight: 17,
+    fontWeight: '800',
+    color: softInk,
+    letterSpacing: -0.08,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: space.md,
+  },
+  sectionKicker: {
     fontSize: type.micro,
     lineHeight: 14,
     fontWeight: '900',
     color: colors.primary,
-    letterSpacing: 1.2,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
-  },
-  title: {
-    fontSize: 29,
-    lineHeight: 34,
-    fontWeight: '800',
-    color: ink,
-    letterSpacing: -0.85,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: space.md,
   },
   sectionTitle: {
     fontSize: type.title,
@@ -348,40 +477,49 @@ const styles = StyleSheet.create({
     color: ink,
     letterSpacing: -0.45,
   },
-  sectionMeta: {
-    fontSize: type.caption,
-    lineHeight: 17,
-    fontWeight: '700',
-    color: muted,
-  },
   listStack: {
     gap: space.md,
   },
   listingCard: {
     borderRadius: radius.xl,
     padding: space.md,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: white,
     borderWidth: 1,
     borderColor: cardBorder,
     gap: space.md,
+    position: 'relative',
     ...Platform.select({
       ios: {
         shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.045,
-        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 14 },
+        shadowOpacity: 0.07,
+        shadowRadius: 26,
       },
-      android: { elevation: 2 },
+      android: { elevation: 3 },
     }),
+  },
+  listingAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 28,
+    width: 4,
+    height: 76,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
   },
   listingTop: {
     flexDirection: 'row',
     gap: space.md,
     alignItems: 'stretch',
   },
+  thumbnailWrap: {
+    width: 98,
+    height: 104,
+    borderRadius: radius.lg,
+  },
   thumbnail: {
-    width: 94,
-    height: 94,
+    width: 98,
+    height: 104,
     borderRadius: radius.lg,
     backgroundColor: '#E5E7EB',
   },
@@ -410,15 +548,17 @@ const styles = StyleSheet.create({
   },
   listingSignals: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 7,
   },
   signal: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 50,
     borderRadius: radius.md,
-    backgroundColor: '#FAFAFC',
+    backgroundColor: '#F6F8FD',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(31,41,55,0.04)',
   },
   signalValue: {
     fontSize: type.caption,
@@ -438,9 +578,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
-    backgroundColor: '#FAFAFC',
+    backgroundColor: '#F8FAFF',
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(31,41,55,0.04)',
   },
   entirePriceColumn: {
     flex: 1,
@@ -450,7 +592,7 @@ const styles = StyleSheet.create({
     width: StyleSheet.hairlineWidth,
     alignSelf: 'stretch',
     marginHorizontal: space.md,
-    backgroundColor: 'rgba(60,60,67,0.12)',
+    backgroundColor: 'rgba(31,41,55,0.09)',
   },
   priceLabel: {
     fontSize: type.caption,
@@ -495,19 +637,38 @@ const styles = StyleSheet.create({
   roommateStrip: {
     minHeight: 44,
     borderRadius: radius.lg,
-    paddingHorizontal: space.md,
+    paddingHorizontal: space.sm,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    backgroundColor: '#FAFAFC',
+    backgroundColor: '#F8FAFF',
+    borderWidth: 1,
+    borderColor: 'rgba(31,41,55,0.04)',
   },
-  roommateIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  roommateAvatarStack: {
+    minWidth: 32,
+    height: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  roommateAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: white,
+    backgroundColor: '#E5E7EB',
+  },
+  roommateAvatarOverlap: {
+    marginLeft: -12,
+  },
+  roommateEmptyIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(47,109,246,0.1)',
   },
   roommateText: {
     flex: 1,
@@ -517,22 +678,42 @@ const styles = StyleSheet.create({
     color: ink,
     letterSpacing: -0.08,
   },
+  roommateTextEmpty: {
+    color: muted,
+  },
   actionsRow: {
     flexDirection: 'row',
     gap: space.sm,
   },
   actionButton: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 44,
     borderRadius: radius.pill,
-    backgroundColor: '#F8F8FA',
+    backgroundColor: '#F7F9FE',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(31,41,55,0.04)',
   },
   actionButtonPrimary: {
-    backgroundColor: 'rgba(47,109,246,0.1)',
+    flex: 1.16,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderColor: 'transparent',
+    borderRadius: 22,
+    padding: 0,
+    overflow: 'visible',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 14,
+      },
+      android: { elevation: 4 },
+    }),
   },
   actionButtonPressed: {
     opacity: 0.82,
@@ -545,7 +726,28 @@ const styles = StyleSheet.create({
     letterSpacing: -0.08,
   },
   actionTextPrimary: {
-    color: colors.primary,
+    color: white,
+    fontWeight: '800',
+  },
+  boostButtonSurface: {
+    flex: 1,
+    alignSelf: 'stretch',
+    borderRadius: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.xs,
+    minHeight: 44,
+    overflow: 'hidden',
+    paddingHorizontal: space.sm,
+  },
+  boostIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
   },
   bottomCtaWrap: {
     position: 'absolute',
@@ -553,26 +755,31 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     alignItems: 'center',
-    paddingTop: space.md,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingTop: space.xl,
+  },
+  bottomCtaFade: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  createButtonShell: {
+    minHeight: 58,
+    borderRadius: radius.pill,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.26,
+        shadowRadius: 20,
+      },
+      android: { elevation: 6 },
+    }),
   },
   createButton: {
-    minHeight: 56,
+    minHeight: 58,
     borderRadius: radius.pill,
-    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.xs,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.22,
-        shadowRadius: 16,
-      },
-      android: { elevation: 5 },
-    }),
   },
   createButtonPressed: {
     transform: [{ scale: 0.98 }],
