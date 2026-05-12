@@ -18,6 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useOnboardingCtaLayout } from '../design/onboardingCtaLayout';
 import { colors, radius, space, type } from '../design/theme';
 import { useAuthLayout } from './auth/useAuthLayout';
+import { ProfileMenuScreen } from './ProfileMenuScreen';
+import { YourListingsScreen } from './YourListingsScreen';
 
 const ink = '#1C1C1E';
 const labelSecondary = '#636366';
@@ -32,6 +34,7 @@ const PIN_POSITIONS = [
 ];
 
 type FooterTab = 'rooms' | 'match' | 'messages';
+type ProfileRoute = 'menu' | 'listings';
 
 export type MainMapScreenProps = {
   /** Return to welcome / auth (design preview). */
@@ -64,7 +67,7 @@ const ROOMS_COUNT: number = 0;
 const ROOMMATES_WAITING: number = 0;
 
 /** Peek height: handle + stats (collapsed). */
-const COLLAPSED_SHEET_H = 132;
+const COLLAPSED_SHEET_H = 104;
 
 const ORB_COLORS = ['#93C5FD', colors.primary, '#A78BFA'] as const;
 
@@ -143,7 +146,7 @@ function NoListingsSurprise() {
   });
   const orbOpacity = breathe.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.55, 0.95],
+    outputRange: [0.05, 0.1],
   });
   const driftRotate = drift.interpolate({
     inputRange: [0, 1],
@@ -224,9 +227,12 @@ function ListingPlaceholderRow() {
 export function MainMapScreen({ onExit }: MainMapScreenProps) {
   const insets = useSafeAreaInsets();
   const { height: windowH } = useWindowDimensions();
-  const { padH } = useOnboardingCtaLayout();
+  const { padH, primaryButtonWidth } = useOnboardingCtaLayout();
   const { sheetCornerRadius } = useAuthLayout();
   const [activeTab, setActiveTab] = useState<FooterTab>('rooms');
+  const [isSheetExpanded, setIsSheetExpanded] = useState(false);
+  const [profileMenuVisible, setProfileMenuVisible] = useState(false);
+  const [profileRoute, setProfileRoute] = useState<ProfileRoute>('menu');
   const [tabBarH, setTabBarH] = useState(
     52 + space.sm + Math.max(insets.bottom, space.sm),
   );
@@ -270,10 +276,12 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
   useEffect(() => {
     sheetAnim.setValue(0);
     currentSheetProgress.current = 0;
+    setIsSheetExpanded(false);
   }, [windowH, tabBarH, sheetAnim]);
 
   const snapSheetAnimTo = useCallback(
     (to: 0 | 1) => {
+      setIsSheetExpanded(to === 1);
       Animated.spring(sheetAnim, {
         toValue: to,
         useNativeDriver: false,
@@ -322,6 +330,25 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
   };
 
   const hasListings = ROOMS_COUNT > 0;
+  const mapCollapseButtonWidth = primaryButtonWidth * 0.6;
+
+  if (profileMenuVisible) {
+    if (profileRoute === 'listings') {
+      return <YourListingsScreen onBack={() => setProfileRoute('menu')} />;
+    }
+
+    return (
+      <ProfileMenuScreen
+        insets={insets}
+        padH={padH}
+        onClose={() => {
+          setProfileRoute('menu');
+          setProfileMenuVisible(false);
+        }}
+        onOpenListings={() => setProfileRoute('listings')}
+      />
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -430,6 +457,10 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
               <Pressable
                 accessibilityRole='button'
                 accessibilityLabel='Profile'
+                onPress={() => {
+                  setProfileRoute('menu');
+                  setProfileMenuVisible(true);
+                }}
                 style={({ pressed }) => [
                   styles.floatPrimary,
                   pressed && styles.floatPressed,
@@ -517,6 +548,33 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
               </View>
             </View>
           </Animated.View>
+
+          {isSheetExpanded ? (
+            <Pressable
+              accessibilityRole='button'
+              accessibilityLabel='Collapse listings and return to map'
+              onPress={() => snapSheetAnimTo(0)}
+              style={({ pressed }) => [
+                styles.mapCollapseButton,
+                {
+                  bottom: tabBarH + space.md,
+                  width: mapCollapseButtonWidth,
+                  marginLeft: -mapCollapseButtonWidth / 2,
+                },
+                pressed && styles.mapCollapseButtonPressed,
+              ]}
+            >
+              <LinearGradient
+                colors={['#7BA6FF', colors.primary]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.mapCollapseButtonGradient}
+              >
+                <Ionicons name='map-outline' size={20} color='#FFFFFF' />
+                <Text style={styles.mapCollapseButtonText}>Map</Text>
+              </LinearGradient>
+            </Pressable>
+          ) : null}
         </>
       ) : (
         <View
@@ -824,7 +882,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingTop: space.sm + 2,
-    paddingBottom: space.lg + 4,
+    paddingBottom: space.sm,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -869,6 +927,43 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: labelSecondary,
     letterSpacing: -0.2,
+  },
+  mapCollapseButton: {
+    position: 'absolute',
+    zIndex: 30,
+    left: '50%',
+    borderRadius: radius.pill,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.35,
+        shadowRadius: 14,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+  mapCollapseButtonGradient: {
+    minHeight: 48,
+    paddingVertical: 13,
+    paddingHorizontal: space.xxl,
+    borderRadius: radius.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.xs,
+  },
+  mapCollapseButtonPressed: {
+    opacity: 0.88,
+  },
+  mapCollapseButtonText: {
+    fontSize: type.bodyLarge,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.25,
   },
   tabPlaceholder: {
     flex: 1,
