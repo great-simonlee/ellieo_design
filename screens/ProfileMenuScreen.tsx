@@ -207,11 +207,7 @@ export function ProfileMenuScreen({
               ]}
             >
               <View style={profileStyles.menuIconWrap}>
-                <Ionicons
-                  name={item.icon}
-                  size={22}
-                  color={rowIconColor}
-                />
+                <Ionicons name={item.icon} size={22} color={rowIconColor} />
               </View>
               <Text style={profileStyles.menuLabel}>{item.label}</Text>
               <Ionicons
@@ -237,11 +233,7 @@ export function ProfileMenuScreen({
               ]}
             >
               <View style={profileStyles.menuIconWrap}>
-                <Ionicons
-                  name={item.icon}
-                  size={22}
-                  color={rowIconColor}
-                />
+                <Ionicons name={item.icon} size={22} color={rowIconColor} />
               </View>
               <Text style={profileStyles.menuLabel}>{item.label}</Text>
               <Ionicons
