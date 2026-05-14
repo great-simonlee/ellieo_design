@@ -53,3 +53,9 @@ export const type = {
   title: 20,
   display: 26,
 };
+
+/** Light blue → brand blue, left → right (matches Log In / OnboardingBottomCta). */
+export const gradientPrimaryHorizontal: [string, string] = [
+  '#7BA6FF',
+  colors.primary,
+];

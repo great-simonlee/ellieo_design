@@ -6,9 +6,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import { colors, radius, space, type } from '../design/theme';
+import { colors, gradientPrimaryHorizontal, radius, space, type } from '../design/theme';
 
-const GRADIENT_ENABLED: [string, string] = ['#7BA6FF', colors.primary];
+const GRADIENT_ENABLED = gradientPrimaryHorizontal;
 const GRADIENT_DISABLED: [string, string] = ['#C7C7CC', '#AEAEB2'];
 
 export type OnboardingBottomCtaProps = {

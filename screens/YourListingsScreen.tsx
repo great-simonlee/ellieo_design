@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useOnboardingCtaLayout } from '../design/onboardingCtaLayout';
-import { colors, radius, space, type } from '../design/theme';
+import { colors, gradientPrimaryHorizontal, radius, space, type } from '../design/theme';
 
 const ink = '#111827';
 const muted = '#687084';
@@ -165,9 +165,13 @@ const LISTINGS: Listing[] = [
 
 export type YourListingsScreenProps = {
   onBack?: () => void;
+  onCreateListing?: () => void;
 };
 
-export function YourListingsScreen({ onBack }: YourListingsScreenProps) {
+export function YourListingsScreen({
+  onBack,
+  onCreateListing,
+}: YourListingsScreenProps) {
   const insets = useSafeAreaInsets();
   const { padH, primaryButtonWidth } = useOnboardingCtaLayout();
   const [roommateListing, setRoommateListing] = useState<Listing | null>(null);
@@ -269,6 +273,7 @@ export function YourListingsScreen({ onBack }: YourListingsScreenProps) {
         <Pressable
           accessibilityRole='button'
           accessibilityLabel='Create a new listing'
+          onPress={onCreateListing}
           style={({ pressed }) => [
             styles.createButtonShell,
             { width: primaryButtonWidth },
@@ -276,7 +281,7 @@ export function YourListingsScreen({ onBack }: YourListingsScreenProps) {
           ]}
         >
           <LinearGradient
-            colors={[colors.primary, '#7C3AED']}
+            colors={gradientPrimaryHorizontal}
             end={{ x: 1, y: 1 }}
             start={{ x: 0, y: 0 }}
             style={styles.createButton}
@@ -594,7 +599,7 @@ function RoommateSheet({
           ) : (
             <View style={styles.roommateEmptyState}>
               <LinearGradient
-                colors={['rgba(47,109,246,0.14)', 'rgba(124,58,237,0.1)']}
+                colors={['rgba(147,197,253,0.35)', 'rgba(47,109,246,0.1)']}
                 style={styles.roommateEmptyOrb}
               >
                 <Ionicons name='people-outline' size={24} color={colors.primary} />
@@ -645,7 +650,7 @@ function ActionButton({
         ]}
       >
         <LinearGradient
-          colors={[colors.primary, '#7C3AED']}
+          colors={gradientPrimaryHorizontal}
           end={{ x: 1, y: 1 }}
           start={{ x: 0, y: 0 }}
           style={styles.boostButtonSurface}

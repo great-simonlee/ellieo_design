@@ -23,7 +23,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, space } from '../../design/theme';
+import { colors, gradientPrimaryHorizontal, space } from '../../design/theme';
 import { authStyles as styles } from './authStyles';
 import { useAuthLayout } from './useAuthLayout';
 
@@ -100,7 +100,7 @@ export function AuthShell({
   const emailLabel = `${actionVerb} with Email`;
 
   /** Same enabled gradient as `OnboardingBottomCta` (Personal onboarding “I Agree”). */
-  const primaryCtaGradient: [string, string] = ['#7BA6FF', colors.primary];
+  const primaryCtaGradient = gradientPrimaryHorizontal;
 
   return (
     <View style={styles.authRoot}>

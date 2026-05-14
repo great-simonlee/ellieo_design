@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useOnboardingCtaLayout } from '../design/onboardingCtaLayout';
 import { colors, radius, space, type } from '../design/theme';
 import { useAuthLayout } from './auth/useAuthLayout';
+import { CreateListingScreen } from './CreateListingScreen';
 import { ProfileMenuScreen } from './ProfileMenuScreen';
 import { YourListingsScreen } from './YourListingsScreen';
 
@@ -34,7 +35,7 @@ const PIN_POSITIONS = [
 ];
 
 type FooterTab = 'rooms' | 'match' | 'messages';
-type ProfileRoute = 'menu' | 'listings';
+type ProfileRoute = 'menu' | 'listings' | 'createListing';
 
 export type MainMapScreenProps = {
   /** Return to welcome / auth (design preview). */
@@ -69,7 +70,7 @@ const ROOMMATES_WAITING: number = 0;
 /** Peek height: handle + stats (collapsed). */
 const COLLAPSED_SHEET_H = 104;
 
-const ORB_COLORS = ['#93C5FD', colors.primary, '#A78BFA'] as const;
+const ORB_COLORS = ['#93C5FD', colors.primary, '#1D4ED8'] as const;
 
 /**
  * Empty listings — soft orb pulse, drifting “lost pins,” playful copy.
@@ -333,8 +334,19 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
   const mapCollapseButtonWidth = primaryButtonWidth * 0.6;
 
   if (profileMenuVisible) {
+    if (profileRoute === 'createListing') {
+      return (
+        <CreateListingScreen onClose={() => setProfileRoute('listings')} />
+      );
+    }
+
     if (profileRoute === 'listings') {
-      return <YourListingsScreen onBack={() => setProfileRoute('menu')} />;
+      return (
+        <YourListingsScreen
+          onBack={() => setProfileRoute('menu')}
+          onCreateListing={() => setProfileRoute('createListing')}
+        />
+      );
     }
 
     return (
