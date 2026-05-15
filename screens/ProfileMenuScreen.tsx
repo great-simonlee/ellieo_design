@@ -34,6 +34,8 @@ type ProfileMenuScreenProps = {
   padH: number;
   onClose: () => void;
   onOpenListings?: () => void;
+  onOpenSavedListings?: () => void;
+  onOpenLifestylePreferences?: () => void;
 };
 
 const PROFILE_MENU_ITEMS: ProfileMenuItem[] = [
@@ -66,6 +68,8 @@ export function ProfileMenuScreen({
   padH,
   onClose,
   onOpenListings,
+  onOpenSavedListings,
+  onOpenLifestylePreferences,
 }: ProfileMenuScreenProps) {
   const [affiliationIndex, setAffiliationIndex] = useState(0);
   const affiliation = PROFILE_AFFILIATIONS[affiliationIndex];
@@ -199,7 +203,15 @@ export function ProfileMenuScreen({
               key={item.label}
               accessibilityRole='button'
               accessibilityLabel={item.label}
-              onPress={index === 0 ? onOpenListings : undefined}
+              onPress={
+                index === 0
+                  ? onOpenListings
+                  : index === 1
+                    ? onOpenSavedListings
+                    : index === 2
+                      ? onOpenLifestylePreferences
+                      : undefined
+              }
               style={({ pressed }) => [
                 profileStyles.menuRow,
                 index === 3 && profileStyles.menuRowLast,

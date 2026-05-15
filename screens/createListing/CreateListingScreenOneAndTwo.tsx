@@ -18,6 +18,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ListingProgressBlock } from '../../components/ListingProgressBlock';
+import { OnboardingNavHeader } from '../../components/OnboardingNavHeader';
 import { useOnboardingCtaLayout } from '../../design/onboardingCtaLayout';
 import { colors, gradientPrimaryHorizontal, radius, space, type } from '../../design/theme';
 import { CreateListingPrimaryCta } from './CreateListingPrimaryCta';
@@ -35,7 +37,6 @@ import {
   MAX_PHOTOS,
   MIN_PHOTOS_CONTINUE,
   pageBg,
-  progressTrackBg,
   required,
   SLOT_GAP,
   STEP_ADDRESS,
@@ -88,11 +89,16 @@ export type CreateListingScreenOneAndTwoProps = {
   onClose: () => void;
   /** Called when address step passes validation (design: advance to property step). */
   onContinuePastAddress?: () => void;
+  /**
+   * When true, hides nav/progress/CTA and renders photos + address in one vertical block for a parent ScrollView.
+   */
+  embedInUnifiedList?: boolean;
 };
 
 export function CreateListingScreenOneAndTwo({
   onClose,
   onContinuePastAddress,
+  embedInUnifiedList = false,
 }: CreateListingScreenOneAndTwoProps) {
   const insets = useSafeAreaInsets();
   const { padH, contentMaxW, primaryButtonWidth } = useOnboardingCtaLayout();
@@ -207,33 +213,13 @@ export function CreateListingScreenOneAndTwo({
     return STEP_ADDRESS / LISTING_TOTAL_STEPS;
   }, [step]);
 
-  const renderProgress = () => (
-    <View style={[styles.progressBlock, { width: innerW, alignSelf: 'center' }]}>
-      <View style={styles.progressTrack}>
-        <LinearGradient
-          colors={gradientPrimaryHorizontal}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={[
-            styles.progressFill,
-            { width: `${Math.min(100, listingProgressFraction * 100)}%` },
-          ]}
-        />
-      </View>
-      <Text style={styles.progressCaption}>
-        {step === 'photos'
-          ? `Step ${STEP_PHOTOS} of ${LISTING_TOTAL_STEPS} · Photos & video`
-          : `Step ${STEP_ADDRESS} of ${LISTING_TOTAL_STEPS} · Verify address`}
-      </Text>
-    </View>
-  );
-
   const renderAddressStep = () => (
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
+        style={styles.flex}
         keyboardShouldPersistTaps='handled'
         contentContainerStyle={[
           styles.scrollPad,
@@ -246,8 +232,6 @@ export function CreateListingScreenOneAndTwo({
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.contentNarrow, { maxWidth: contentMaxW }]}>
-          {renderProgress()}
-
           <View style={{ width: innerW, alignSelf: 'center' }}>
             <View style={styles.fieldBlock}>
               <Text style={styles.label}>
@@ -342,40 +326,20 @@ export function CreateListingScreenOneAndTwo({
     </KeyboardAvoidingView>
   );
 
+  const exitSearch = () => {
+    setStep('address');
+    setFocusedField(null);
+  };
+
   const renderSearchStep = () => (
     <View style={styles.flex}>
-      <View
-        style={[
-          styles.searchTopSafe,
-          { paddingTop: insets.top + space.md, paddingHorizontal: padH },
-        ]}
-      >
-        <Pressable
-          accessibilityRole='button'
-          accessibilityLabel='Go back'
-          hitSlop={10}
-          onPress={() => {
-            setStep('address');
-            setFocusedField(null);
-          }}
-          style={({ pressed }) => [styles.headerButton, pressed && styles.headerButtonPressed]}
-        >
-          <Ionicons name='arrow-back' size={22} color={ink} />
-        </Pressable>
-        <Text style={styles.searchScreenTitle}>Search address</Text>
-        <Pressable
-          accessibilityRole='button'
-          accessibilityLabel='Close search'
-          hitSlop={10}
-          onPress={() => {
-            setStep('address');
-            setFocusedField(null);
-          }}
-          style={({ pressed }) => [styles.headerButton, pressed && styles.headerButtonPressed]}
-        >
-          <Ionicons name='close' size={22} color={ink} />
-        </Pressable>
-      </View>
+      <OnboardingNavHeader
+        padH={padH}
+        onBack={exitSearch}
+        onClose={exitSearch}
+        closeAccessibilityLabel='Close search'
+        center={<Text style={styles.searchScreenTitle}>Search address</Text>}
+      />
 
       <View style={[styles.searchFieldSection, { paddingHorizontal: padH }]}>
         <View
@@ -582,6 +546,7 @@ export function CreateListingScreenOneAndTwo({
   const renderPhotosStep = () => (
     <View style={styles.flex}>
       <ScrollView
+        style={styles.flex}
         contentContainerStyle={{
           paddingTop: space.sm,
           paddingBottom: insets.bottom + BOTTOM_CTA_SCROLL_CLEARANCE,
@@ -590,8 +555,6 @@ export function CreateListingScreenOneAndTwo({
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.contentNarrow, { maxWidth: contentMaxW }]}>
-          {renderProgress()}
-
           <View style={[styles.introBullets, { width: innerW, alignSelf: 'center' }]}>
             <View style={styles.bulletRow}>
               <Text style={styles.bulletGlyph} accessibilityElementsHidden>
@@ -704,127 +667,285 @@ export function CreateListingScreenOneAndTwo({
     </View>
   );
 
-  return (
-    <View style={styles.root}>
-      <StatusBar style='dark' />
-
-      {step !== 'search' ? (
+  const photoPickerModal = (
+    <Modal
+      visible={pickerOpen}
+      transparent
+      animationType='fade'
+      onRequestClose={() => !pickerBusy && setPickerOpen(false)}
+    >
+      <View style={styles.pickerModalRoot} accessibilityViewIsModal>
+        <Pressable
+          accessibilityRole='button'
+          accessibilityLabel='Dismiss'
+          disabled={pickerBusy}
+          onPress={() => !pickerBusy && setPickerOpen(false)}
+          style={({ pressed }) => [
+            styles.pickerScrim,
+            pressed && !pickerBusy && styles.pickerScrimPressed,
+          ]}
+        />
         <View
           style={[
-            styles.headerBar,
-            {
-              paddingTop: insets.top + space.md,
-              paddingHorizontal: padH,
-            },
+            styles.pickerSheet,
+            { paddingBottom: insets.bottom + space.lg },
           ]}
         >
-          <View style={styles.headerRow}>
-            <Pressable
-              accessibilityRole='button'
-              accessibilityLabel='Go back'
-              hitSlop={10}
-              onPress={handleBack}
-              style={({ pressed }) => [
-                styles.headerButton,
-                pressed && styles.headerButtonPressed,
-              ]}
-            >
-              <Ionicons name='arrow-back' size={22} color={ink} />
-            </Pressable>
-            <Pressable
-              accessibilityRole='button'
-              accessibilityLabel='Close'
-              hitSlop={10}
-              onPress={handleHeaderClose}
-              style={({ pressed }) => [
-                styles.headerButton,
-                pressed && styles.headerButtonPressed,
-              ]}
-            >
-              <Ionicons name='close' size={22} color={ink} />
-            </Pressable>
-          </View>
+          {pickerBusy ? (
+            <View style={styles.pickerBusyBlock}>
+              <ActivityIndicator size='large' color={colors.primary} />
+              <Text style={styles.pickerBusyLabel}>Adding photos…</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.pickerSheetTitle}>Add photos</Text>
+              <Text style={styles.pickerSheetCaption}>
+                From your library — first image appears first (up to {MAX_PHOTOS}).
+              </Text>
+              <Pressable
+                accessibilityRole='button'
+                accessibilityLabel='Choose photos from library'
+                onPress={handleGalleryPick}
+                style={({ pressed }) => [
+                  styles.pickerPrimaryOuter,
+                  pressed && styles.pickerPrimaryPressed,
+                ]}
+              >
+                <LinearGradient
+                  colors={gradientPrimaryHorizontal}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={styles.pickerPrimaryGradient}
+                >
+                  <Ionicons name='images-outline' size={20} color={white} />
+                  <Text style={[styles.pickerPrimaryText, { marginLeft: space.sm }]}>
+                    Choose from library
+                  </Text>
+                </LinearGradient>
+              </Pressable>
+              <Pressable
+                accessibilityRole='button'
+                accessibilityLabel='Cancel'
+                onPress={() => setPickerOpen(false)}
+                style={({ pressed }) => [
+                  styles.pickerCancel,
+                  pressed && styles.pickerCancelPressed,
+                ]}
+              >
+                <Text style={styles.pickerCancelText}>Cancel</Text>
+              </Pressable>
+            </>
+          )}
         </View>
-      ) : null}
+      </View>
+    </Modal>
+  );
 
-      {step === 'address'
-        ? renderAddressStep()
-        : step === 'search'
-          ? renderSearchStep()
-          : renderPhotosStep()}
-
-      <Modal
-        visible={pickerOpen}
-        transparent
-        animationType='fade'
-        onRequestClose={() => !pickerBusy && setPickerOpen(false)}
-      >
-        <View style={styles.pickerModalRoot} accessibilityViewIsModal>
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel='Dismiss'
-            disabled={pickerBusy}
-            onPress={() => !pickerBusy && setPickerOpen(false)}
-            style={({ pressed }) => [
-              styles.pickerScrim,
-              pressed && !pickerBusy && styles.pickerScrimPressed,
-            ]}
-          />
+  if (embedInUnifiedList) {
+    return (
+      <>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ width: '100%' }}
+        >
           <View
-            style={[
-              styles.pickerSheet,
-              { paddingBottom: insets.bottom + space.lg },
-            ]}
+            style={{
+              paddingHorizontal: padH,
+              paddingTop: space.md,
+              paddingBottom: space.lg,
+            }}
           >
-            {pickerBusy ? (
-              <View style={styles.pickerBusyBlock}>
-                <ActivityIndicator size='large' color={colors.primary} />
-                <Text style={styles.pickerBusyLabel}>Adding photos…</Text>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.pickerSheetTitle}>Add photos</Text>
-                <Text style={styles.pickerSheetCaption}>
-                  From your library — first image appears first (up to {MAX_PHOTOS}).
-                </Text>
-                <Pressable
-                  accessibilityRole='button'
-                  accessibilityLabel='Choose photos from library'
-                  onPress={handleGalleryPick}
-                  style={({ pressed }) => [
-                    styles.pickerPrimaryOuter,
-                    pressed && styles.pickerPrimaryPressed,
-                  ]}
-                >
-                  <LinearGradient
-                    colors={gradientPrimaryHorizontal}
-                    start={{ x: 0, y: 0.5 }}
-                    end={{ x: 1, y: 0.5 }}
-                    style={styles.pickerPrimaryGradient}
+            <View style={[styles.contentNarrow, { maxWidth: contentMaxW }]}>
+              <View style={[styles.introBullets, { width: innerW, alignSelf: 'center' }]}>
+                <View style={styles.bulletRow}>
+                  <Text style={styles.bulletGlyph} accessibilityElementsHidden>
+                    •
+                  </Text>
+                  <Text
+                    style={styles.introBulletText}
+                    numberOfLines={1}
+                    ellipsizeMode='tail'
+                    accessibilityLabel='Please upload at least 4 real photos of your space.'
                   >
-                    <Ionicons name='images-outline' size={20} color={white} />
-                    <Text style={[styles.pickerPrimaryText, { marginLeft: space.sm }]}>
-                      Choose from library
-                    </Text>
-                  </LinearGradient>
-                </Pressable>
-                <Pressable
-                  accessibilityRole='button'
-                  accessibilityLabel='Cancel'
-                  onPress={() => setPickerOpen(false)}
-                  style={({ pressed }) => [
-                    styles.pickerCancel,
-                    pressed && styles.pickerCancelPressed,
+                    <Text style={styles.bulletBold}>4+ real photos</Text> of your actual space.
+                  </Text>
+                </View>
+                <View style={styles.bulletRow}>
+                  <Text style={styles.bulletGlyph} accessibilityElementsHidden>
+                    •
+                  </Text>
+                  <Text
+                    style={styles.introBulletText}
+                    numberOfLines={1}
+                    ellipsizeMode='tail'
+                    accessibilityLabel='Do not use photos from websites or other people.'
+                  >
+                    {`No web, stock, or other people's photos.`}
+                  </Text>
+                </View>
+                <View style={styles.bulletRow}>
+                  <Text style={styles.bulletGlyph} accessibilityElementsHidden>
+                    •
+                  </Text>
+                  <Text
+                    style={styles.introBulletText}
+                    numberOfLines={1}
+                    ellipsizeMode='tail'
+                    accessibilityLabel='High-quality photos attract up to 3 times more attention.'
+                  >
+                    <Text style={styles.bulletBold}>Quality photos</Text> get up to{' '}
+                    <Text style={styles.bulletBold}>3x</Text> more attention.
+                  </Text>
+                </View>
+              </View>
+
+              {renderListingPhotoGrid()}
+
+              <View style={[styles.youtubeBlock, { width: innerW, alignSelf: 'center' }]}>
+                <Text style={styles.label}>YouTube URL (Optional)</Text>
+                <TextInput
+                  value={youtubeUrl}
+                  onChangeText={setYoutubeUrl}
+                  onFocus={() => setFocusedField('youtube')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder='https://www.youtube.com/watch?v=…'
+                  placeholderTextColor={captionMuted}
+                  selectionColor={colors.primary}
+                  keyboardType='url'
+                  autoCapitalize='none'
+                  autoCorrect={false}
+                  style={[
+                    styles.inputShell,
+                    styles.inputShellText,
+                    focusedField === 'youtube' && styles.inputShellFocused,
                   ]}
-                >
-                  <Text style={styles.pickerCancelText}>Cancel</Text>
-                </Pressable>
-              </>
-            )}
+                />
+              </View>
+
+              <View style={{ height: space.xl }} />
+
+              <View style={{ width: innerW, alignSelf: 'center' }}>
+                <View style={styles.fieldBlock}>
+                  <Text style={styles.label}>
+                    Displayed address <Text style={styles.asterisk}>*</Text>
+                  </Text>
+                  <TextInput
+                    value={displayedAddress}
+                    onChangeText={setDisplayedAddress}
+                    onFocus={() => setFocusedField('displayed')}
+                    onBlur={() => setFocusedField(null)}
+                    placeholder='e.g. E 14th St'
+                    placeholderTextColor={captionMuted}
+                    selectionColor={colors.primary}
+                    style={[
+                      styles.inputShell,
+                      styles.inputShellText,
+                      focusedField === 'displayed' && styles.inputShellFocused,
+                    ]}
+                  />
+                  <Text style={styles.helper}>Shown on your public listing.</Text>
+                </View>
+
+                <View style={styles.fieldBlock}>
+                  <Text style={styles.label}>
+                    Actual address <Text style={styles.asterisk}>*</Text>
+                  </Text>
+                  <Pressable
+                    accessibilityRole='button'
+                    accessibilityLabel='Search address'
+                    onPress={openSearch}
+                    style={({ pressed }) => [
+                      styles.inputShell,
+                      styles.searchAddressRow,
+                      pressed && styles.inputShellPressed,
+                    ]}
+                  >
+                    <Ionicons
+                      name='search-outline'
+                      size={20}
+                      color={labelSecondary}
+                      style={styles.searchAddressRowIcon}
+                    />
+                    <Text
+                      style={[styles.inputLikeText, !actualAddress && styles.placeholderText]}
+                      numberOfLines={1}
+                    >
+                      {actualAddress || 'Search for your street address'}
+                    </Text>
+                  </Pressable>
+                  <Text style={styles.helper}>Verification only — never displayed publicly.</Text>
+                </View>
+
+                <View style={styles.fieldBlockLast}>
+                  <Text style={styles.label}>
+                    Unit number <Text style={styles.asterisk}>*</Text>
+                  </Text>
+                  <TextInput
+                    value={unitNumber}
+                    onChangeText={setUnitNumber}
+                    onFocus={() => setFocusedField('unit')}
+                    onBlur={() => setFocusedField(null)}
+                    placeholder='Apt, floor, or unit'
+                    placeholderTextColor={captionMuted}
+                    selectionColor={colors.primary}
+                    style={[
+                      styles.inputShell,
+                      styles.inputShellText,
+                      focusedField === 'unit' && styles.inputShellFocused,
+                    ]}
+                  />
+                  <Text style={styles.helper}>Verification only — never displayed publicly.</Text>
+                </View>
+              </View>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </KeyboardAvoidingView>
+
+        <Modal
+          visible={step === 'search'}
+          animationType='slide'
+          onRequestClose={exitSearch}
+        >
+          <View style={{ flex: 1, backgroundColor: white, paddingTop: insets.top }}>
+            {renderSearchStep()}
+          </View>
+        </Modal>
+
+        {photoPickerModal}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <View style={[styles.root, { paddingTop: insets.top }]}>
+        <StatusBar style='dark' />
+
+        {step !== 'search' ? (
+          <OnboardingNavHeader
+            padH={padH}
+            onBack={handleBack}
+            onClose={handleHeaderClose}
+          />
+        ) : null}
+
+        {step !== 'search' ? (
+          <ListingProgressBlock
+            padH={padH}
+            step={step === 'photos' ? STEP_PHOTOS : STEP_ADDRESS}
+            title={step === 'photos' ? 'Photos & video' : 'Verify address'}
+            progressRatio={listingProgressFraction}
+          />
+        ) : null}
+
+        {step === 'address'
+          ? renderAddressStep()
+          : step === 'search'
+            ? renderSearchStep()
+            : renderPhotosStep()}
+      </View>
+      {photoPickerModal}
+    </>
   );
 }
 
@@ -836,64 +957,12 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  headerBar: {
-    backgroundColor: pageBg,
-    zIndex: 2,
-  },
-  headerRow: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.08,
-        shadowRadius: 18,
-      },
-      android: { elevation: 2 },
-    }),
-  },
-  headerButtonPressed: {
-    opacity: 0.7,
-  },
   contentNarrow: {
     width: '100%',
     alignSelf: 'center',
   },
   scrollPad: {
     flexGrow: 1,
-  },
-  progressBlock: {
-    marginBottom: space.lg,
-  },
-  progressTrack: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: progressTrackBg,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  progressCaption: {
-    marginTop: space.sm,
-    fontSize: type.caption,
-    fontWeight: '600',
-    color: captionMuted,
-    letterSpacing: -0.1,
   },
   introBullets: {
     alignSelf: 'center',
@@ -1156,16 +1225,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: space.xl,
   },
-  searchTopSafe: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 48,
-    backgroundColor: pageBg,
-    paddingBottom: space.sm,
-  },
   searchScreenTitle: {
-    flex: 1,
     textAlign: 'center',
     fontSize: type.title,
     fontWeight: '700',

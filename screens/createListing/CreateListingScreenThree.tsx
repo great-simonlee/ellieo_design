@@ -17,6 +17,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ListingProgressBlock } from '../../components/ListingProgressBlock';
+import { OnboardingNavHeader } from '../../components/OnboardingNavHeader';
 import { useOnboardingCtaLayout } from '../../design/onboardingCtaLayout';
 import { colors, gradientPrimaryHorizontal, radius, space, type } from '../../design/theme';
 import { CreateListingPrimaryCta } from './CreateListingPrimaryCta';
@@ -30,7 +32,6 @@ import {
   labelSecondary,
   LISTING_TOTAL_STEPS,
   pageBg,
-  progressTrackBg,
   required,
   STEP_PROPERTY,
   white,
@@ -50,6 +51,49 @@ const COUNT_LABELS = (n: number, unit: 'bed' | 'bath') => {
   return `${n} ${u}s`;
 };
 
+const COUNT_VALUES = [0, 1, 2, 3] as const;
+
+function CountPickerRow({
+  unit,
+  selected,
+  onSelect,
+}: {
+  unit: 'bed' | 'bath';
+  selected: number | null;
+  onSelect: (value: number) => void;
+}) {
+  return (
+    <View style={styles.countRow}>
+      {COUNT_VALUES.map((n) => {
+        const isSelected = selected === n;
+        return (
+          <Pressable
+            key={n}
+            accessibilityRole='button'
+            accessibilityLabel={COUNT_LABELS(n, unit)}
+            accessibilityState={{ selected: isSelected }}
+            onPress={() => onSelect(n)}
+            style={({ pressed }) => [
+              styles.countCard,
+              isSelected && styles.countCardSelected,
+              pressed && styles.countCardPressed,
+            ]}
+          >
+            {isSelected ? (
+              <View style={styles.countCardCheck}>
+                <Ionicons name='checkmark' size={14} color={white} />
+              </View>
+            ) : null}
+            <Text style={[styles.countCardNumber, isSelected && styles.countCardNumberSelected]}>
+              {n}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 const ROOM_KINDS = [
   'Master w/ Bath',
   'Master w/o Bath',
@@ -68,6 +112,8 @@ export type CreateListingScreenThreeProps = {
   onClose: () => void;
   onBack: () => void;
   onContinue: (snapshot: ListingStep3Snapshot) => void;
+  embedInUnifiedList?: boolean;
+  onUnifiedSnapshot?: (snapshot: ListingStep3Snapshot) => void;
 };
 
 export function CreateListingScreenThree({
@@ -75,6 +121,8 @@ export function CreateListingScreenThree({
   onClose,
   onBack,
   onContinue,
+  embedInUnifiedList = false,
+  onUnifiedSnapshot,
 }: CreateListingScreenThreeProps) {
   const insets = useSafeAreaInsets();
   const { padH, contentMaxW, primaryButtonWidth } = useOnboardingCtaLayout();
@@ -172,6 +220,18 @@ export function CreateListingScreenThree({
     ]).start();
   }, [picker, backdropOpacity, sheetClosedY, sheetTranslateY]);
 
+  useEffect(() => {
+    if (!embedInUnifiedList || !onUnifiedSnapshot) return;
+    onUnifiedSnapshot({ propertyTypeId, bedroom, bathroom, rooms });
+  }, [
+    embedInUnifiedList,
+    onUnifiedSnapshot,
+    propertyTypeId,
+    bedroom,
+    bathroom,
+    rooms,
+  ]);
+
   const addRoom = () => {
     setRooms((prev) =>
       prev.length >= MAX_ROOM_TYPE_ROWS
@@ -192,19 +252,10 @@ export function CreateListingScreenThree({
 
   const progressFraction = STEP_PROPERTY / LISTING_TOTAL_STEPS;
 
-  const pickerOptions =
-    picker?.kind === 'bed' || picker?.kind === 'bath'
-      ? [0, 1, 2, 3].map((n) => ({
-          key: String(n),
-          label:
-            picker.kind === 'bed'
-              ? COUNT_LABELS(n, 'bed')
-              : COUNT_LABELS(n, 'bath'),
-          value: n,
-        }))
-      : picker?.kind === 'roomKind'
-        ? ROOM_KINDS.map((k) => ({ key: k, label: k, value: k }))
-        : [];
+  const roomKindOptions =
+    picker?.kind === 'roomKind'
+      ? ROOM_KINDS.map((k) => ({ key: k, label: k, value: k }))
+      : [];
 
   const applyPicker = (value: string | number) => {
     if (!picker) return;
@@ -236,72 +287,8 @@ export function CreateListingScreenThree({
             }
           : { title: '', subtitle: '' };
 
-  return (
-    <View style={styles.root}>
-      <StatusBar style='dark' />
-      <View
-        style={[
-          styles.headerBar,
-          {
-            paddingTop: insets.top + space.md,
-            paddingHorizontal: padH,
-          },
-        ]}
-      >
-        <View style={styles.headerRow}>
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel='Go back'
-            hitSlop={10}
-            onPress={onBack}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.headerButtonPressed,
-            ]}
-          >
-            <Ionicons name='arrow-back' size={22} color={ink} />
-          </Pressable>
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel='Close'
-            hitSlop={10}
-            onPress={onClose}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.headerButtonPressed,
-            ]}
-          >
-            <Ionicons name='close' size={22} color={ink} />
-          </Pressable>
-        </View>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={{
-          paddingTop: space.sm,
-          paddingBottom: insets.bottom + BOTTOM_CTA_SCROLL_CLEARANCE,
-          paddingHorizontal: padH,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
+  const listingForm = (
         <View style={[styles.contentNarrow, { maxWidth: contentMaxW }]}>
-          <View style={[styles.progressBlock, { width: innerW, alignSelf: 'center' }]}>
-            <View style={styles.progressTrack}>
-              <LinearGradient
-                colors={gradientPrimaryHorizontal}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={[
-                  styles.progressFill,
-                  { width: `${Math.min(100, progressFraction * 100)}%` },
-                ]}
-              />
-            </View>
-            <Text style={styles.progressCaption}>
-              {`Step ${STEP_PROPERTY} of ${LISTING_TOTAL_STEPS} · Property details`}
-            </Text>
-          </View>
-
           <Text style={[styles.sectionLabel, { width: innerW, alignSelf: 'center' }]}>
             Property type <Text style={styles.asterisk}>*</Text>
           </Text>
@@ -429,40 +416,16 @@ export function CreateListingScreenThree({
               accessibilityRole='button'
               accessibilityLabel='Add a room'
               onPress={addRoom}
-              style={({ pressed }) => [styles.addRoom, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.addRoom, pressed && styles.addRoomPressed]}
             >
-              <View style={styles.addRoomIcon}>
-                <Ionicons name='add' size={18} color={colors.primary} />
-              </View>
+              <Ionicons name='add-circle-outline' size={20} color={colors.primary} />
               <Text style={styles.addRoomText}>Add a room</Text>
             </Pressable>
           ) : null}
         </View>
-      </ScrollView>
+  );
 
-      <View
-        pointerEvents='box-none'
-        style={[styles.bottomDock, { paddingBottom: insets.bottom + space.md }]}
-      >
-        <LinearGradient
-          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.98)']}
-          style={StyleSheet.absoluteFill}
-        />
-        <CreateListingPrimaryCta
-          label='Continue'
-          disabled={!stepValid}
-          onPress={() =>
-            onContinue({
-              propertyTypeId,
-              bedroom,
-              bathroom,
-              rooms,
-            })
-          }
-          width={primaryButtonWidth}
-        />
-      </View>
-
+  const pickerModal = (
       <Modal
         visible={picker != null}
         transparent
@@ -513,67 +476,144 @@ export function CreateListingScreenThree({
                 onPress={dismissSheet}
                 style={({ pressed }) => [
                   styles.sheetCancelHit,
-                  pressed && styles.headerButtonPressed,
+                  pressed && styles.navPressed,
                 ]}
               >
                 <Text style={styles.sheetCancelText}>Cancel</Text>
               </Pressable>
             </View>
 
-            <View style={styles.sheetOptionsCard}>
-              <ScrollView
-                keyboardShouldPersistTaps='handled'
-                nestedScrollEnabled
-                scrollEnabled={picker?.kind === 'roomKind'}
-                style={picker?.kind === 'roomKind' ? styles.sheetRoomKindOptionsScroll : undefined}
-                showsVerticalScrollIndicator={picker?.kind === 'roomKind'}
-              >
-                {pickerOptions.map((opt, index) => {
-                  const isLast = index === pickerOptions.length - 1;
-                  const isSelected =
-                    picker?.kind === 'bed'
-                      ? bedroom === opt.value
-                      : picker?.kind === 'bath'
-                        ? bathroom === opt.value
-                        : picker?.kind === 'roomKind'
-                          ? rooms[picker.index]?.kind === opt.value
-                          : false;
-                  return (
-                    <Pressable
-                      key={opt.key}
-                      accessibilityRole='menuitem'
-                      accessibilityState={{ selected: isSelected }}
-                      onPress={() => applyPicker(opt.value)}
-                      style={({ pressed }) => [
-                        styles.sheetOptionRow,
-                        !isLast && styles.sheetOptionRowBorder,
-                        isSelected && styles.sheetOptionRowSelected,
-                        pressed &&
-                          (isSelected
-                            ? styles.sheetOptionRowPressedSelected
-                            : styles.sheetOptionRowPressed),
-                      ]}
-                    >
-                      <Text
-                        style={[styles.sheetRowText, isSelected && styles.sheetRowTextSelected]}
-                        numberOfLines={2}
+            {picker?.kind === 'bed' || picker?.kind === 'bath' ? (
+              <CountPickerRow
+                unit={picker.kind}
+                selected={picker.kind === 'bed' ? bedroom : bathroom}
+                onSelect={(value) => applyPicker(value)}
+              />
+            ) : (
+              <View style={styles.sheetOptionsCard}>
+                <ScrollView
+                  keyboardShouldPersistTaps='handled'
+                  nestedScrollEnabled
+                  scrollEnabled={picker?.kind === 'roomKind'}
+                  style={picker?.kind === 'roomKind' ? styles.sheetRoomKindOptionsScroll : undefined}
+                  showsVerticalScrollIndicator={picker?.kind === 'roomKind'}
+                >
+                  {roomKindOptions.map((opt, index) => {
+                    const isLast = index === roomKindOptions.length - 1;
+                    const isSelected =
+                      picker?.kind === 'roomKind'
+                        ? rooms[picker.index]?.kind === opt.value
+                        : false;
+                    return (
+                      <Pressable
+                        key={opt.key}
+                        accessibilityRole='menuitem'
+                        accessibilityState={{ selected: isSelected }}
+                        onPress={() => applyPicker(opt.value)}
+                        style={({ pressed }) => [
+                          styles.sheetOptionRow,
+                          !isLast && styles.sheetOptionRowBorder,
+                          isSelected && styles.sheetOptionRowSelected,
+                          pressed &&
+                            (isSelected
+                              ? styles.sheetOptionRowPressedSelected
+                              : styles.sheetOptionRowPressed),
+                        ]}
                       >
-                        {opt.label}
-                      </Text>
-                      <Ionicons
-                        name='checkmark-circle'
-                        size={24}
-                        color={colors.primary}
-                        style={[styles.sheetCheck, !isSelected && styles.sheetCheckHidden]}
-                      />
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
+                        <Text
+                          style={[styles.sheetRowText, isSelected && styles.sheetRowTextSelected]}
+                          numberOfLines={2}
+                        >
+                          {opt.label}
+                        </Text>
+                        <Ionicons
+                          name='checkmark-circle'
+                          size={24}
+                          color={colors.primary}
+                          style={[styles.sheetCheck, !isSelected && styles.sheetCheckHidden]}
+                        />
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
           </Animated.View>
         </View>
       </Modal>
+  );
+
+  if (embedInUnifiedList) {
+    return (
+      <>
+        <ScrollView
+          scrollEnabled={false}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps='handled'
+          showsVerticalScrollIndicator={false}
+          style={{ backgroundColor: pageBg }}
+          contentContainerStyle={{
+            paddingTop: space.lg,
+            paddingBottom: space.xxl,
+            paddingHorizontal: padH,
+          }}
+        >
+          {listingForm}
+        </ScrollView>
+        {pickerModal}
+      </>
+    );
+  }
+
+  return (
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <StatusBar style='dark' />
+      <OnboardingNavHeader padH={padH} onBack={onBack} onClose={onClose} />
+
+      <ListingProgressBlock
+        padH={padH}
+        step={STEP_PROPERTY}
+        title='Property details'
+        progressRatio={progressFraction}
+      />
+
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={{
+          paddingTop: space.sm,
+          paddingBottom: insets.bottom + BOTTOM_CTA_SCROLL_CLEARANCE,
+          paddingHorizontal: padH,
+        }}
+        keyboardShouldPersistTaps='handled'
+        showsVerticalScrollIndicator={false}
+      >
+        {listingForm}
+      </ScrollView>
+
+      <View
+        pointerEvents='box-none'
+        style={[styles.bottomDock, { paddingBottom: insets.bottom + space.md }]}
+      >
+        <LinearGradient
+          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.98)']}
+          style={StyleSheet.absoluteFill}
+        />
+        <CreateListingPrimaryCta
+          label='Continue'
+          disabled={!stepValid}
+          onPress={() =>
+            onContinue({
+              propertyTypeId,
+              bedroom,
+              bathroom,
+              rooms,
+            })
+          }
+          width={primaryButtonWidth}
+        />
+      </View>
+
+      {pickerModal}
     </View>
   );
 }
@@ -583,61 +623,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: pageBg,
   },
-  headerBar: {
-    backgroundColor: pageBg,
-    zIndex: 2,
+  flex: {
+    flex: 1,
   },
-  headerRow: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.08,
-        shadowRadius: 18,
-      },
-      android: { elevation: 2 },
-    }),
-  },
-  headerButtonPressed: {
-    opacity: 0.7,
+  navPressed: {
+    opacity: 0.55,
   },
   contentNarrow: {
     width: '100%',
     alignSelf: 'center',
-  },
-  progressBlock: {
-    marginBottom: space.lg,
-  },
-  progressTrack: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: progressTrackBg,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  progressCaption: {
-    marginTop: space.sm,
-    fontSize: type.caption,
-    fontWeight: '600',
-    color: captionMuted,
-    letterSpacing: -0.1,
   },
   sectionLabel: {
     fontSize: type.caption,
@@ -785,26 +779,26 @@ const styles = StyleSheet.create({
   addRoom: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
     marginTop: space.sm,
     marginBottom: space.lg,
     gap: space.sm,
+    minHeight: 52,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: 'rgba(47, 109, 246, 0.35)',
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(47, 109, 246, 0.04)',
   },
-  addRoomIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: fieldBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: white,
+  addRoomPressed: {
+    opacity: 0.88,
   },
   addRoomText: {
     fontSize: type.body,
     fontWeight: '700',
     color: colors.primary,
-    letterSpacing: -0.15,
+    letterSpacing: -0.2,
   },
   bottomDock: {
     position: 'absolute',
@@ -890,6 +884,51 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary,
     letterSpacing: -0.2,
+  },
+  countRow: {
+    flexDirection: 'row',
+    gap: space.sm,
+    paddingBottom: space.sm,
+  },
+  countCard: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 88,
+    paddingVertical: space.lg,
+    paddingHorizontal: space.xs,
+    borderRadius: radius.md,
+    backgroundColor: fieldFill,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  countCardSelected: {
+    backgroundColor: 'rgba(47, 109, 246, 0.08)',
+    borderColor: colors.primary,
+  },
+  countCardPressed: {
+    backgroundColor: 'rgba(60, 60, 67, 0.08)',
+  },
+  countCardCheck: {
+    position: 'absolute',
+    top: space.sm,
+    right: space.sm,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
+  countCardNumber: {
+    fontSize: type.display,
+    lineHeight: 32,
+    fontWeight: '800',
+    color: ink,
+    letterSpacing: -0.6,
+  },
+  countCardNumberSelected: {
+    color: colors.primary,
   },
   sheetOptionsCard: {
     borderRadius: radius.md,

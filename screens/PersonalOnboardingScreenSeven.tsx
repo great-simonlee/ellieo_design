@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { OnboardingProgressBlock } from '../components/OnboardingProgressBlock';
 import { StatusBar } from 'expo-status-bar';
 import { type ComponentProps, useMemo, useState } from 'react';
 import {
@@ -241,16 +241,31 @@ export const LIFESTYLE_SECTIONS: LifestyleSectionConfig[] = [
 
 type Selections = Partial<Record<string, string>>;
 
+function buildProfileEditDefaultSelections(): Selections {
+  const out: Selections = {};
+  for (const section of LIFESTYLE_SECTIONS) {
+    const first = section.options[0];
+    if (first) out[section.id] = first.id;
+  }
+  return out;
+}
+
 type PersonalOnboardingScreenSevenProps = {
   onBack: () => void;
   onSkip?: () => void;
   onComplete?: () => void;
+  /**
+   * `profile` — opened from account menu to edit preferences; same UI as onboarding
+   * with dummy selections prefilled (design shell only).
+   */
+  mode?: 'onboarding' | 'profile';
 };
 
 export function PersonalOnboardingScreenSeven({
   onBack,
   onSkip,
   onComplete,
+  mode = 'onboarding',
 }: PersonalOnboardingScreenSevenProps) {
   const insets = useSafeAreaInsets();
   const { width: windowW } = useWindowDimensions();
@@ -260,7 +275,9 @@ export function PersonalOnboardingScreenSeven({
   const onboardingStepNumber = 6;
   const progressRatio = 6 / 6;
 
-  const [selections, setSelections] = useState<Selections>({});
+  const [selections, setSelections] = useState<Selections>(() =>
+    mode === 'profile' ? buildProfileEditDefaultSelections() : {},
+  );
 
   const contentW = useMemo(
     () => Math.min(contentMaxW, windowW - padH * 2),
@@ -280,7 +297,13 @@ export function PersonalOnboardingScreenSeven({
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <StatusBar style='dark' />
 
-      <View style={[styles.headerRow, { paddingHorizontal: padH }]}>
+      <View
+        style={[
+          styles.headerRow,
+          mode === 'profile' && styles.headerRowProfile,
+          { paddingHorizontal: padH },
+        ]}
+      >
         <Pressable
           accessibilityRole='button'
           accessibilityLabel='Go back'
@@ -293,50 +316,37 @@ export function PersonalOnboardingScreenSeven({
         >
           <Ionicons name='chevron-back' size={26} color={ink} />
         </Pressable>
-        <Pressable
-          accessibilityRole='button'
-          accessibilityLabel='Skip lifestyle preferences'
-          onPress={() => onSkip?.()}
-          hitSlop={12}
-          style={({ pressed }) => [
-            styles.skipBtn,
-            pressed && styles.skipPressed,
-          ]}
-        >
-          <Text style={styles.skipLabel}>Skip</Text>
-        </Pressable>
+        {mode === 'onboarding' ? (
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel='Skip lifestyle preferences'
+            onPress={() => onSkip?.()}
+            hitSlop={12}
+            style={({ pressed }) => [
+              styles.skipBtn,
+              pressed && styles.skipPressed,
+            ]}
+          >
+            <Text style={styles.skipLabel}>Skip</Text>
+          </Pressable>
+        ) : null}
       </View>
 
-      <View
-        style={[styles.progressBlock, { paddingHorizontal: padH }]}
-        accessibilityRole='progressbar'
-        accessibilityValue={{
-          min: 1,
-          max: ONBOARDING_TOTAL_STEPS,
-          now: onboardingStepNumber,
-        }}
-        accessibilityLabel={`Onboarding step ${onboardingStepNumber} of ${ONBOARDING_TOTAL_STEPS}`}
-      >
-        <View style={styles.progressTrack}>
-          <LinearGradient
-            colors={['#7BA6FF', colors.primary]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={[
-              styles.progressFill,
-              { width: `${Math.min(1, progressRatio) * 100}%` },
-            ]}
-          />
-        </View>
-        <Text style={styles.progressCaption}>
-          Step {onboardingStepNumber} of {ONBOARDING_TOTAL_STEPS}
-        </Text>
-      </View>
+      {mode === 'onboarding' ? (
+        <OnboardingProgressBlock
+          padH={padH}
+          step={onboardingStepNumber}
+          totalSteps={ONBOARDING_TOTAL_STEPS}
+          title='Lifestyle'
+          progressRatio={progressRatio}
+        />
+      ) : null}
 
       <ScrollView
         style={styles.flex}
         contentContainerStyle={[
           styles.scrollContent,
+          mode === 'profile' && styles.scrollContentProfile,
           {
             paddingHorizontal: padH,
             paddingBottom: insets.bottom + 100,
@@ -345,14 +355,16 @@ export function PersonalOnboardingScreenSeven({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps='handled'
       >
-        <View style={[styles.titleBlock, { maxWidth: contentMaxW }]}>
-          <Text style={[styles.screenTitle, { maxWidth: contentMaxW }]}>
-            What is your lifestyle?
-          </Text>
-          <Text style={[styles.screenSubtitle, { maxWidth: contentMaxW }]}>
-            Choose one answer per section. You can edit these anytime.
-          </Text>
-        </View>
+        {mode === 'onboarding' ? (
+          <View style={[styles.titleBlock, { maxWidth: contentMaxW }]}>
+            <Text style={[styles.screenTitle, { maxWidth: contentMaxW }]}>
+              What is your lifestyle?
+            </Text>
+            <Text style={[styles.screenSubtitle, { maxWidth: contentMaxW }]}>
+              Choose one answer per section. You can edit these anytime.
+            </Text>
+          </View>
+        ) : null}
 
         {LIFESTYLE_SECTIONS.map((section, si) => (
           <View
@@ -473,6 +485,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingBottom: space.xs,
   },
+  headerRowProfile: {
+    justifyContent: 'flex-start',
+  },
   backBtn: {
     marginLeft: -space.xs,
     padding: space.xs,
@@ -490,34 +505,15 @@ const styles = StyleSheet.create({
     color: colors.primary,
     letterSpacing: -0.2,
   },
-  /** Matches `PersonalOnboardingScreenFive` progress chrome. */
-  progressBlock: {
-    paddingBottom: space.md,
-    width: '100%',
-  },
-  progressTrack: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#E5E5EA',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  progressCaption: {
-    marginTop: space.sm,
-    fontSize: type.caption,
-    fontWeight: '600',
-    color: captionMuted,
-    letterSpacing: -0.1,
-  },
   scrollContent: {
     paddingTop: space.sm,
     maxWidth: 520,
     width: '100%',
     alignSelf: 'center',
     alignItems: 'center',
+  },
+  scrollContentProfile: {
+    paddingTop: space.md,
   },
   titleBlock: {
     marginBottom: space.xxl,

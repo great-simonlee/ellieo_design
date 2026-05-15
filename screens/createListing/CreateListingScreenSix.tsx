@@ -3,8 +3,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import {
-  Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,9 +10,12 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ListingProgressBlock } from '../../components/ListingProgressBlock';
+import { OnboardingNavHeader } from '../../components/OnboardingNavHeader';
 import { useOnboardingCtaLayout } from '../../design/onboardingCtaLayout';
-import { colors, gradientPrimaryHorizontal, radius, space, type } from '../../design/theme';
+import { colors, radius, space, type } from '../../design/theme';
 import { CreateListingPrimaryCta } from './CreateListingPrimaryCta';
+import { StepSixPickerSheet } from './StepSixPickerSheet';
 import {
   BOTTOM_CTA_SCROLL_CLEARANCE,
   captionMuted,
@@ -24,30 +25,10 @@ import {
   labelSecondary,
   LISTING_TOTAL_STEPS,
   pageBg,
-  progressTrackBg,
   required,
   STEP_LEASE,
   white,
 } from './createListingTokens';
-
-const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-] as const;
-
-const TIMINGS = ['Early', 'Mid', 'Late'] as const;
-
-const LEASE_TERMS = ['0-6 months', '7-12 months', '1 years or more'] as const;
 
 const LEASE_TYPES = [
   { id: 'new', label: 'New Lease' },
@@ -57,12 +38,9 @@ const LEASE_TYPES = [
 ] as const;
 
 const PROMOTIONS = [
-  { id: 'noBroker', label: 'No broker fee', icon: 'people-outline' as const },
-  { id: 'reducedAmenity', label: 'Reduced amenity fee', icon: 'bulb-outline' as const },
+  { id: 'noBroker', label: 'No Broker Fee', icon: 'people-outline' as const },
+  { id: 'reducedAmenity', label: 'Amenity Reduced', icon: 'bulb-outline' as const },
 ] as const;
-
-const FREE_MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
-const LEASE_LENGTH_OPTIONS = Array.from({ length: 31 }, (_, i) => i + 6);
 
 const MAX_FREE_MONTH_ROWS = 2;
 
@@ -80,9 +58,148 @@ export type CreateListingScreenSixProps = {
   onClose: () => void;
   onBack: () => void;
   onContinue: () => void;
+  embedInUnifiedList?: boolean;
 };
 
-export function CreateListingScreenSix({ onClose, onBack, onContinue }: CreateListingScreenSixProps) {
+function SectionTitle({
+  children,
+  required: isRequired,
+  optional,
+  hint,
+}: {
+  children: string;
+  required?: boolean;
+  optional?: boolean;
+  hint?: string;
+}) {
+  return (
+    <View style={styles.sectionTitleRow}>
+      <Text style={styles.sectionTitle}>
+        {children}
+        {isRequired ? <Text style={styles.asterisk}> *</Text> : null}
+      </Text>
+      {optional ? <Text style={styles.optionalTag}>Optional</Text> : null}
+      {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
+    </View>
+  );
+}
+
+function SelectField({
+  value,
+  placeholder,
+  onPress,
+  fullWidth,
+  elevated,
+}: {
+  value: string | null;
+  placeholder: string;
+  onPress: () => void;
+  fullWidth?: boolean;
+  elevated?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole='button'
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.selectField,
+        elevated && styles.selectFieldElevated,
+        fullWidth && styles.selectFieldFull,
+        pressed && styles.pressedFade,
+      ]}
+    >
+      <Text
+        style={[styles.selectFieldText, !value && styles.placeholderText]}
+        numberOfLines={1}
+      >
+        {value ?? placeholder}
+      </Text>
+      <Ionicons name='chevron-down' size={18} color={captionMuted} />
+    </Pressable>
+  );
+}
+
+function SentencePicker({
+  value,
+  placeholder,
+  onPress,
+  accessibilityLabel,
+}: {
+  value: string | null;
+  placeholder: string;
+  onPress: () => void;
+  accessibilityLabel: string;
+}) {
+  const filled = value != null;
+  return (
+    <Pressable
+      accessibilityRole='button'
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => [styles.sentencePickerHit, pressed && styles.pressedFade]}
+    >
+      <Text
+        style={[styles.sentencePickerValue, !filled && styles.sentencePickerPlaceholder]}
+        numberOfLines={1}
+      >
+        {value ?? placeholder}
+      </Text>
+    </Pressable>
+  );
+}
+
+function FreeMonthOptionCard({
+  row,
+  onPickFreeMonths,
+  onPickLeaseLength,
+  onRemove,
+}: {
+  row: FreeRow;
+  onPickFreeMonths: () => void;
+  onPickLeaseLength: () => void;
+  onRemove: () => void;
+}) {
+  const freeValue = row.freeMonths != null ? String(row.freeMonths) : null;
+  const leaseValue = row.leaseMonths != null ? String(row.leaseMonths) : null;
+
+  return (
+    <View style={styles.freeOfferRow}>
+      <View style={styles.freeOfferSentence}>
+        <SentencePicker
+          value={freeValue}
+          placeholder='—'
+          accessibilityLabel='Months free'
+          onPress={onPickFreeMonths}
+        />
+        <Text style={styles.freeOfferStatic}> free on </Text>
+        <SentencePicker
+          value={leaseValue}
+          placeholder='—'
+          accessibilityLabel='Lease length in months'
+          onPress={onPickLeaseLength}
+        />
+        <Text style={styles.freeOfferStatic}> months lease</Text>
+      </View>
+      <Pressable
+        accessibilityRole='button'
+        accessibilityLabel='Remove free month offer'
+        onPress={onRemove}
+        hitSlop={8}
+        style={({ pressed }) => [styles.freeOfferRemove, pressed && styles.pressedFade]}
+      >
+        <Ionicons name='remove-circle-outline' size={22} color={captionMuted} />
+      </Pressable>
+    </View>
+  );
+}
+
+export function CreateListingScreenSix({
+  onClose,
+  onBack,
+  onContinue,
+  embedInUnifiedList = false,
+}: CreateListingScreenSixProps) {
   const insets = useSafeAreaInsets();
   const { padH, contentMaxW, primaryButtonWidth } = useOnboardingCtaLayout();
   const innerW = contentMaxW;
@@ -122,67 +239,14 @@ export function CreateListingScreenSix({ onClose, onBack, onContinue }: CreateLi
 
   const closePicker = () => setPicker(null);
 
-  const applyPicker = (value: string | number) => {
-    if (!picker) return;
-    if (picker.kind === 'month') setMoveInMonth(String(value));
-    else if (picker.kind === 'timing') setMoveInTiming(String(value));
-    else if (picker.kind === 'leaseTerm') setLeaseTerm(String(value));
-    else if (picker.kind === 'freeMonths') {
-      patchFreeRow(picker.rowId, { freeMonths: value as number });
-    } else if (picker.kind === 'leaseLength') {
-      patchFreeRow(picker.rowId, { leaseMonths: value as number });
-    }
-    closePicker();
-  };
-
-  const pickerMeta = useMemo(() => {
-    if (!picker) return { title: '', options: [] as { key: string; label: string; value: string | number }[] };
-    if (picker.kind === 'month') {
-      return {
-        title: 'Month',
-        options: MONTHS.map((m) => ({ key: m, label: m, value: m })),
-      };
-    }
-    if (picker.kind === 'timing') {
-      return {
-        title: 'Timing',
-        options: TIMINGS.map((t) => ({ key: t, label: t, value: t })),
-      };
-    }
-    if (picker.kind === 'leaseTerm') {
-      return {
-        title: 'Lease term',
-        options: LEASE_TERMS.map((t) => ({ key: t, label: t, value: t })),
-      };
-    }
-    if (picker.kind === 'freeMonths') {
-      return {
-        title: 'Months free',
-        options: FREE_MONTH_OPTIONS.map((n) => ({
-          key: String(n),
-          label: `${n} month${n === 1 ? '' : 's'}`,
-          value: n,
-        })),
-      };
-    }
-    return {
-      title: 'Lease length (months)',
-      options: LEASE_LENGTH_OPTIONS.map((n) => ({
-        key: String(n),
-        label: `${n} months`,
-        value: n,
-      })),
-    };
-  }, [picker]);
-
-  const selectedValue = useMemo(() => {
+  const pickerSelectedValue = useMemo((): string | number | null => {
     if (!picker) return null;
     if (picker.kind === 'month') return moveInMonth;
     if (picker.kind === 'timing') return moveInTiming;
     if (picker.kind === 'leaseTerm') return leaseTerm;
     const row = freeRows.find((r) => r.id === picker.rowId);
-    if (picker.kind === 'freeMonths') return row?.freeMonths ?? null;
-    return row?.leaseMonths ?? null;
+    if (!row) return null;
+    return picker.kind === 'freeMonths' ? row.freeMonths : row.leaseMonths;
   }, [picker, moveInMonth, moveInTiming, leaseTerm, freeRows]);
 
   const stepValid = useMemo(() => {
@@ -192,237 +256,189 @@ export function CreateListingScreenSix({ onClose, onBack, onContinue }: CreateLi
 
   const progressFraction = STEP_LEASE / LISTING_TOTAL_STEPS;
 
-  return (
-    <View style={styles.root}>
-      <StatusBar style='dark' />
-      <View
-        style={[
-          styles.headerBar,
-          {
-            paddingTop: insets.top + space.md,
-            paddingHorizontal: padH,
-          },
-        ]}
-      >
-        <View style={styles.headerRow}>
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel='Go back'
-            hitSlop={10}
-            onPress={onBack}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.headerButtonPressed,
-            ]}
-          >
-            <Ionicons name='arrow-back' size={22} color={ink} />
-          </Pressable>
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel='Close'
-            hitSlop={10}
-            onPress={onClose}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.headerButtonPressed,
-            ]}
-          >
-            <Ionicons name='close' size={22} color={ink} />
-          </Pressable>
+  const pickerSheet = (
+    <StepSixPickerSheet
+      picker={picker}
+      selectedValue={pickerSelectedValue}
+      onSelect={(value) => {
+        if (!picker) return;
+        if (picker.kind === 'month') setMoveInMonth(String(value));
+        else if (picker.kind === 'timing') setMoveInTiming(String(value));
+        else if (picker.kind === 'leaseTerm') setLeaseTerm(String(value));
+        else if (picker.kind === 'freeMonths') {
+          patchFreeRow(picker.rowId, { freeMonths: value as number });
+        } else if (picker.kind === 'leaseLength') {
+          patchFreeRow(picker.rowId, { leaseMonths: value as number });
+        }
+      }}
+      onDismiss={closePicker}
+    />
+  );
+
+  const leaseForm = (
+        <View style={[styles.contentNarrow, { maxWidth: contentMaxW, width: innerW, gap: space.xxl }]}>
+          <View style={styles.section}>
+            <SectionTitle required>Available move-in schedule</SectionTitle>
+            <View style={styles.splitRow}>
+              <SelectField
+                value={moveInMonth}
+                placeholder='Month'
+                onPress={() => setPicker({ kind: 'month' })}
+              />
+              <SelectField
+                value={moveInTiming}
+                placeholder='Early / Mid / Late'
+                onPress={() => setPicker({ kind: 'timing' })}
+              />
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <SectionTitle required>Lease term</SectionTitle>
+            <SelectField
+              value={leaseTerm}
+              placeholder='Choose your lease term'
+              onPress={() => setPicker({ kind: 'leaseTerm' })}
+              fullWidth
+            />
+          </View>
+
+          <View style={styles.section}>
+            <SectionTitle optional>Promotion</SectionTitle>
+            <View style={styles.promoRow}>
+              {PROMOTIONS.map((p) => {
+                const on = promotions.has(p.id);
+                return (
+                  <Pressable
+                    key={p.id}
+                    accessibilityRole='checkbox'
+                    accessibilityState={{ checked: on }}
+                    onPress={() => togglePromotion(p.id)}
+                    style={({ pressed }) => [
+                      styles.promoCard,
+                      on && styles.promoCardSelected,
+                      pressed && styles.pressedFade,
+                    ]}
+                  >
+                    <View style={[styles.promoIconWrap, on && styles.promoIconWrapSelected]}>
+                      <Ionicons
+                        name={p.icon}
+                        size={20}
+                        color={on ? colors.primary : labelSecondary}
+                      />
+                    </View>
+                    <Text
+                      style={[styles.promoCardLabel, on && styles.promoCardLabelSelected]}
+                      numberOfLines={2}
+                    >
+                      {p.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <SectionTitle required>Lease type</SectionTitle>
+            <View style={styles.leaseTypeGrid}>
+              {LEASE_TYPES.map((lt) => {
+                const selected = leaseTypeId === lt.id;
+                return (
+                  <Pressable
+                    key={lt.id}
+                    accessibilityRole='button'
+                    accessibilityState={{ selected }}
+                    onPress={() => setLeaseTypeId(lt.id)}
+                    style={({ pressed }) => [
+                      styles.leaseTypeChip,
+                      selected && styles.chipSelected,
+                      pressed && styles.pressedFade,
+                    ]}
+                  >
+                    <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+                      {lt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <SectionTitle>Free month</SectionTitle>
+            {freeRows.length > 0 ? (
+              <View style={styles.freeMonthList}>
+                {freeRows.map((row) => (
+                  <FreeMonthOptionCard
+                    key={row.id}
+                    row={row}
+                    onPickFreeMonths={() => setPicker({ kind: 'freeMonths', rowId: row.id })}
+                    onPickLeaseLength={() => setPicker({ kind: 'leaseLength', rowId: row.id })}
+                    onRemove={() => removeFreeRow(row.id)}
+                  />
+                ))}
+              </View>
+            ) : null}
+            {freeRows.length < MAX_FREE_MONTH_ROWS ? (
+              <Pressable
+                accessibilityRole='button'
+                onPress={addFreeRow}
+                style={({ pressed }) => [styles.addFreeBtn, pressed && styles.pressedFade]}
+              >
+                <Ionicons name='add-circle-outline' size={20} color={colors.primary} />
+                <Text style={styles.addFreeBtnText}>Add free month option</Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
-      </View>
+  );
+
+  if (embedInUnifiedList) {
+    return (
+      <>
+        <ScrollView
+          scrollEnabled={false}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps='handled'
+          showsVerticalScrollIndicator={false}
+          style={{ backgroundColor: pageBg }}
+          contentContainerStyle={{
+            paddingTop: space.md,
+            paddingBottom: space.xxxl + space.xxl,
+            paddingHorizontal: padH,
+          }}
+        >
+          {leaseForm}
+        </ScrollView>
+        {pickerSheet}
+      </>
+    );
+  }
+
+  return (
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <StatusBar style='dark' />
+      <OnboardingNavHeader padH={padH} onBack={onBack} onClose={onClose} />
+
+      <ListingProgressBlock
+        padH={padH}
+        step={STEP_LEASE}
+        title='Move-in & lease'
+        progressRatio={progressFraction}
+      />
 
       <ScrollView
+        style={styles.flex}
         contentContainerStyle={{
-          paddingTop: space.sm,
+          paddingTop: space.md,
           paddingBottom: insets.bottom + BOTTOM_CTA_SCROLL_CLEARANCE,
           paddingHorizontal: padH,
         }}
+        keyboardShouldPersistTaps='handled'
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.contentNarrow, { maxWidth: contentMaxW }]}>
-          <View style={[styles.progressBlock, { width: innerW, alignSelf: 'center' }]}>
-            <View style={styles.progressTrack}>
-              <LinearGradient
-                colors={gradientPrimaryHorizontal}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={[
-                  styles.progressFill,
-                  { width: `${Math.min(100, progressFraction * 100)}%` },
-                ]}
-              />
-            </View>
-            <Text style={styles.progressCaption}>
-              {`Step ${STEP_LEASE} of ${LISTING_TOTAL_STEPS} · Move-in & lease`}
-            </Text>
-          </View>
-
-          <Text style={[styles.sectionLabel, { width: innerW, alignSelf: 'center' }]}>
-            Available Move-in Schedule <Text style={styles.asterisk}>*</Text>
-          </Text>
-          <View style={[styles.splitRow, { width: innerW, alignSelf: 'center' }]}>
-            <Pressable
-              accessibilityRole='button'
-              onPress={() => setPicker({ kind: 'month' })}
-              style={({ pressed }) => [styles.splitCell, pressed && styles.cellPressed]}
-            >
-              <Text
-                style={[styles.inputLikeText, !moveInMonth && styles.placeholderText]}
-                numberOfLines={1}
-              >
-                {moveInMonth ?? 'Month'}
-              </Text>
-              <Ionicons name='chevron-down' size={18} color={captionMuted} />
-            </Pressable>
-            <Pressable
-              accessibilityRole='button'
-              onPress={() => setPicker({ kind: 'timing' })}
-              style={({ pressed }) => [styles.splitCell, pressed && styles.cellPressed]}
-            >
-              <Text
-                style={[styles.inputLikeText, !moveInTiming && styles.placeholderText]}
-                numberOfLines={1}
-              >
-                {moveInTiming ?? 'Early/Mid/Late'}
-              </Text>
-              <Ionicons name='chevron-down' size={18} color={captionMuted} />
-            </Pressable>
-          </View>
-
-          <Text
-            style={[styles.sectionLabel, { width: innerW, alignSelf: 'center', marginTop: space.xl }]}
-          >
-            Lease Term <Text style={styles.asterisk}>*</Text>
-          </Text>
-          <Pressable
-            accessibilityRole='button'
-            onPress={() => setPicker({ kind: 'leaseTerm' })}
-            style={({ pressed }) => [
-              styles.fullCell,
-              { width: innerW, alignSelf: 'center' },
-              pressed && styles.cellPressed,
-            ]}
-          >
-            <Text style={[styles.inputLikeText, !leaseTerm && styles.placeholderText]} numberOfLines={1}>
-              {leaseTerm ?? 'Choose your lease term'}
-            </Text>
-            <Ionicons name='chevron-down' size={18} color={captionMuted} />
-          </Pressable>
-
-          <Text
-            style={[styles.sectionLabel, { width: innerW, alignSelf: 'center', marginTop: space.xl }]}
-          >
-            Promotion
-          </Text>
-          <View style={[styles.promoRow, { width: innerW, alignSelf: 'center' }]}>
-            {PROMOTIONS.map((p) => {
-              const on = promotions.has(p.id);
-              return (
-                <Pressable
-                  key={p.id}
-                  accessibilityRole='checkbox'
-                  accessibilityState={{ checked: on }}
-                  onPress={() => togglePromotion(p.id)}
-                  style={({ pressed }) => [
-                    styles.promoChip,
-                    on && styles.promoChipSelected,
-                    pressed && styles.cellPressed,
-                  ]}
-                >
-                  <Ionicons name={p.icon} size={18} color={on ? colors.primary : captionMuted} />
-                  <Text style={[styles.promoChipText, on && styles.promoChipTextSelected]} numberOfLines={2}>
-                    {p.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Text
-            style={[styles.sectionLabel, { width: innerW, alignSelf: 'center', marginTop: space.xl }]}
-          >
-            Lease type <Text style={styles.asterisk}>*</Text>
-          </Text>
-          <View style={[styles.leaseTypeWrap, { width: innerW, alignSelf: 'center' }]}>
-            {LEASE_TYPES.map((lt) => {
-              const selected = leaseTypeId === lt.id;
-              return (
-                <Pressable
-                  key={lt.id}
-                  accessibilityRole='button'
-                  accessibilityState={{ selected }}
-                  onPress={() => setLeaseTypeId(lt.id)}
-                  style={({ pressed }) => [
-                    styles.leaseTypeChip,
-                    selected && styles.leaseTypeChipSelected,
-                    pressed && styles.cellPressed,
-                  ]}
-                >
-                  <Text style={[styles.leaseTypeChipText, selected && styles.leaseTypeChipTextSelected]}>
-                    {lt.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Text
-            style={[styles.sectionLabel, { width: innerW, alignSelf: 'center', marginTop: space.xl }]}
-          >
-            Free Month <Text style={styles.sectionHint}>(Max {MAX_FREE_MONTH_ROWS} options)</Text>
-          </Text>
-          {freeRows.map((row) => (
-            <View key={row.id} style={[styles.freeRow, { width: innerW, alignSelf: 'center' }]}>
-              <Pressable
-                style={({ pressed }) => [styles.freeMini, pressed && styles.cellPressed]}
-                onPress={() => setPicker({ kind: 'freeMonths', rowId: row.id })}
-              >
-                <Text
-                  style={[styles.freeMiniText, row.freeMonths == null && styles.placeholderText]}
-                  numberOfLines={1}
-                >
-                  {row.freeMonths != null ? String(row.freeMonths) : 'Free'}
-                </Text>
-                <Ionicons name='chevron-down' size={14} color={captionMuted} />
-              </Pressable>
-              <Text style={styles.freeRowCopy}>months free on</Text>
-              <Pressable
-                style={({ pressed }) => [styles.freeMini, pressed && styles.cellPressed]}
-                onPress={() => setPicker({ kind: 'leaseLength', rowId: row.id })}
-              >
-                <Text
-                  style={[styles.freeMiniText, row.leaseMonths == null && styles.placeholderText]}
-                  numberOfLines={1}
-                >
-                  {row.leaseMonths != null ? String(row.leaseMonths) : 'Length'}
-                </Text>
-                <Ionicons name='chevron-down' size={14} color={captionMuted} />
-              </Pressable>
-              <Text style={styles.freeRowCopy}>months lease</Text>
-              <Pressable
-                accessibilityRole='button'
-                accessibilityLabel='Remove free month row'
-                onPress={() => removeFreeRow(row.id)}
-                style={({ pressed }) => [styles.removeMini, pressed && styles.headerButtonPressed]}
-              >
-                <Ionicons name='remove' size={18} color={ink} />
-              </Pressable>
-            </View>
-          ))}
-          {freeRows.length < MAX_FREE_MONTH_ROWS ? (
-            <Pressable
-              accessibilityRole='button'
-              onPress={addFreeRow}
-              style={({ pressed }) => [styles.addFree, pressed && { opacity: 0.7 }]}
-            >
-              <View style={styles.addFreeIcon}>
-                <Ionicons name='add' size={18} color={colors.primary} />
-              </View>
-              <Text style={styles.addFreeText}>Add free month option</Text>
-            </Pressable>
-          ) : null}
-        </View>
+        {leaseForm}
       </ScrollView>
 
       <View
@@ -441,35 +457,7 @@ export function CreateListingScreenSix({ onClose, onBack, onContinue }: CreateLi
         />
       </View>
 
-      <Modal visible={picker != null} transparent animationType='fade' onRequestClose={closePicker}>
-        <Pressable style={styles.modalScrim} onPress={closePicker} accessibilityLabel='Dismiss' />
-        <View style={styles.pickerCard} pointerEvents='box-none'>
-          <Text style={styles.pickerTitle}>{pickerMeta.title}</Text>
-          <ScrollView style={styles.pickerScroll} keyboardShouldPersistTaps='handled'>
-            {pickerMeta.options.map((opt, index) => {
-              const isLast = index === pickerMeta.options.length - 1;
-              const sel =
-                typeof opt.value === 'number'
-                  ? selectedValue === opt.value
-                  : selectedValue === opt.value;
-              return (
-                <Pressable
-                  key={opt.key}
-                  onPress={() => applyPicker(opt.value)}
-                  style={({ pressed }) => [
-                    styles.pickerRow,
-                    !isLast && styles.pickerRowBorder,
-                    sel && styles.pickerRowSelected,
-                    pressed && styles.cellPressed,
-                  ]}
-                >
-                  <Text style={[styles.pickerRowText, sel && styles.pickerRowTextSelected]}>{opt.label}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      </Modal>
+      {pickerSheet}
     </View>
   );
 }
@@ -479,74 +467,49 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: pageBg,
   },
-  headerBar: {
-    backgroundColor: pageBg,
-    zIndex: 2,
+  flex: {
+    flex: 1,
   },
-  headerRow: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.08,
-        shadowRadius: 18,
-      },
-      android: { elevation: 2 },
-    }),
-  },
-  headerButtonPressed: {
-    opacity: 0.7,
+  navPressed: {
+    opacity: 0.55,
   },
   contentNarrow: {
     width: '100%',
     alignSelf: 'center',
   },
-  progressBlock: {
-    marginBottom: space.lg,
+  section: {
+    gap: space.md,
   },
-  progressTrack: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: progressTrackBg,
-    overflow: 'hidden',
+  sectionTitleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: space.sm,
+    marginBottom: space.xs,
   },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  progressCaption: {
-    marginTop: space.sm,
-    fontSize: type.caption,
-    fontWeight: '600',
-    color: captionMuted,
-    letterSpacing: -0.1,
-  },
-  sectionLabel: {
-    fontSize: type.caption,
-    fontWeight: '600',
-    color: labelSecondary,
-    letterSpacing: -0.1,
-    marginBottom: space.sm,
-    textTransform: 'uppercase',
+  sectionTitle: {
+    fontSize: type.bodyLarge,
+    fontWeight: '700',
+    color: ink,
+    letterSpacing: -0.35,
   },
   sectionHint: {
-    textTransform: 'none',
+    fontSize: type.caption,
     fontWeight: '500',
     color: captionMuted,
+    letterSpacing: -0.08,
+  },
+  optionalTag: {
+    fontSize: type.micro,
+    fontWeight: '600',
+    color: labelSecondary,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
+    paddingVertical: 2,
+    paddingHorizontal: space.sm,
+    borderRadius: radius.pill,
+    backgroundColor: fieldFill,
+    overflow: 'hidden',
   },
   asterisk: {
     color: required,
@@ -555,170 +518,188 @@ const styles = StyleSheet.create({
   splitRow: {
     flexDirection: 'row',
     gap: space.sm,
-    marginBottom: space.md,
   },
-  splitCell: {
+  selectField: {
     flex: 1,
+    flexBasis: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: Platform.select({ ios: 52, default: 50 }),
-    borderRadius: radius.sm + 2,
+    gap: space.sm,
+    minHeight: 52,
     paddingHorizontal: space.md,
+    borderRadius: radius.md,
     backgroundColor: fieldFill,
     borderWidth: 1,
     borderColor: fieldBorder,
   },
-  fullCell: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: Platform.select({ ios: 52, default: 50 }),
-    borderRadius: radius.sm + 2,
-    paddingHorizontal: space.lg,
-    backgroundColor: fieldFill,
-    borderWidth: 1,
-    borderColor: fieldBorder,
-  },
-  cellPressed: {
-    opacity: 0.88,
-  },
-  inputLikeText: {
-    flex: 1,
-    fontSize: type.bodyLarge,
-    fontWeight: '500',
-    color: ink,
-    letterSpacing: -0.25,
-    minWidth: 0,
-  },
-  placeholderText: {
-    color: captionMuted,
-    fontWeight: '400',
-  },
-  promoRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: space.sm,
-  },
-  promoChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingVertical: space.md,
-    paddingHorizontal: space.lg,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: fieldBorder,
+  selectFieldElevated: {
     backgroundColor: white,
-    flexGrow: 1,
-    minWidth: '45%',
   },
-  promoChipSelected: {
-    borderColor: colors.primary,
-    borderWidth: 2,
-    backgroundColor: 'rgba(47, 109, 246, 0.06)',
+  selectFieldFull: {
+    flex: undefined,
+    flexBasis: undefined,
+    width: '100%',
+    paddingHorizontal: space.lg,
   },
-  promoChipText: {
+  selectFieldText: {
     flex: 1,
     fontSize: type.body,
     fontWeight: '600',
     color: ink,
+    letterSpacing: -0.2,
     minWidth: 0,
   },
-  promoChipTextSelected: {
+  placeholderText: {
+    color: captionMuted,
+    fontWeight: '500',
+  },
+  pressedFade: {
+    opacity: 0.88,
+  },
+  promoRow: {
+    flexDirection: 'row',
+    gap: space.sm,
+  },
+  promoCard: {
+    flex: 1,
+    flexBasis: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.sm,
+    minHeight: 88,
+    paddingVertical: space.md,
+    paddingHorizontal: space.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: fieldBorder,
+    backgroundColor: white,
+  },
+  promoCardSelected: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+    backgroundColor: 'rgba(47, 109, 246, 0.05)',
+  },
+  promoIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: fieldFill,
+  },
+  promoIconWrapSelected: {
+    backgroundColor: 'rgba(47, 109, 246, 0.12)',
+  },
+  promoCardLabel: {
+    fontSize: type.caption,
+    fontWeight: '700',
+    color: ink,
+    textAlign: 'center',
+    letterSpacing: -0.15,
+  },
+  promoCardLabelSelected: {
     color: colors.primary,
   },
-  leaseTypeWrap: {
+  leaseTypeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: space.sm,
   },
   leaseTypeChip: {
+    flexGrow: 1,
+    flexBasis: '47%',
+    minHeight: 48,
     paddingVertical: space.md,
-    paddingHorizontal: space.lg,
+    paddingHorizontal: space.md,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: fieldBorder,
     backgroundColor: white,
-    minWidth: '47%',
-    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  leaseTypeChipSelected: {
+  chipSelected: {
     borderColor: colors.primary,
     borderWidth: 2,
-    backgroundColor: 'rgba(47, 109, 246, 0.06)',
+    backgroundColor: 'rgba(47, 109, 246, 0.05)',
   },
-  leaseTypeChipText: {
+  chipLabel: {
     fontSize: type.body,
     fontWeight: '600',
     color: ink,
     textAlign: 'center',
+    letterSpacing: -0.2,
   },
-  leaseTypeChipTextSelected: {
+  chipLabelSelected: {
     color: colors.primary,
   },
-  freeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: space.xs,
-    marginBottom: space.sm,
+  freeMonthList: {
+    gap: space.sm,
   },
-  freeMini: {
+  freeOfferRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    minHeight: 40,
-    paddingHorizontal: space.sm,
-    borderRadius: radius.sm,
+    gap: space.sm,
+    paddingVertical: space.md,
+    paddingHorizontal: space.md,
+    borderRadius: radius.md,
     backgroundColor: fieldFill,
     borderWidth: 1,
     borderColor: fieldBorder,
   },
-  freeMiniText: {
-    fontSize: type.body,
-    fontWeight: '600',
-    color: ink,
-    maxWidth: 56,
+  freeOfferSentence: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    minWidth: 0,
   },
-  freeRowCopy: {
-    fontSize: type.caption,
+  freeOfferStatic: {
+    fontSize: type.bodyLarge,
     fontWeight: '500',
     color: ink,
+    letterSpacing: -0.25,
   },
-  removeMini: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: fieldBorder,
-    backgroundColor: white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: space.xs,
+  sentencePickerHit: {
+    paddingVertical: 2,
+    paddingHorizontal: space.sm,
+    marginHorizontal: space.xs,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
   },
-  addFree: {
+  sentencePickerValue: {
+    fontSize: type.bodyLarge,
+    fontWeight: '800',
+    color: colors.primary,
+    letterSpacing: -0.3,
+  },
+  sentencePickerPlaceholder: {
+    fontWeight: '600',
+    color: captionMuted,
+    borderBottomColor: captionMuted,
+  },
+  freeOfferRemove: {
+    padding: space.xs,
+    flexShrink: 0,
+  },
+  addFreeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginTop: space.sm,
-    gap: space.sm,
-  },
-  addFreeIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: fieldBorder,
-    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: white,
+    gap: space.sm,
+    minHeight: 52,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: 'rgba(47, 109, 246, 0.35)',
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(47, 109, 246, 0.04)',
   },
-  addFreeText: {
+  addFreeBtnText: {
     fontSize: type.body,
     fontWeight: '700',
     color: colors.primary,
-    letterSpacing: -0.15,
+    letterSpacing: -0.2,
   },
   bottomDock: {
     position: 'absolute',
@@ -727,62 +708,5 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     paddingTop: space.xl,
-  },
-  modalScrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-    zIndex: 1,
-  },
-  pickerCard: {
-    position: 'absolute',
-    left: space.lg,
-    right: space.lg,
-    top: '22%',
-    maxHeight: '52%',
-    zIndex: 2,
-    backgroundColor: white,
-    borderRadius: radius.lg,
-    padding: space.lg,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.18,
-        shadowRadius: 28,
-      },
-      android: { elevation: 12 },
-    }),
-  },
-  pickerTitle: {
-    fontSize: type.title,
-    fontWeight: '800',
-    color: ink,
-    marginBottom: space.md,
-    letterSpacing: -0.4,
-  },
-  pickerScroll: {
-    maxHeight: 360,
-  },
-  pickerRow: {
-    paddingVertical: space.md,
-  },
-  pickerRowBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: fieldBorder,
-  },
-  pickerRowSelected: {
-    backgroundColor: 'rgba(47, 109, 246, 0.06)',
-    marginHorizontal: -space.lg,
-    paddingHorizontal: space.lg,
-    borderRadius: radius.sm,
-  },
-  pickerRowText: {
-    fontSize: type.bodyLarge,
-    fontWeight: '500',
-    color: ink,
-  },
-  pickerRowTextSelected: {
-    fontWeight: '700',
-    color: colors.primary,
   },
 });

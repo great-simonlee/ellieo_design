@@ -1,5 +1,5 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { OnboardingProgressBlock } from '../components/OnboardingProgressBlock';
 import { StatusBar } from 'expo-status-bar';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -177,31 +177,13 @@ export function AgentOnboardingScreenTwo({
         </Pressable>
       </View>
 
-      <View
-        style={[styles.progressBlock, { paddingHorizontal: padH }]}
-        accessibilityRole='progressbar'
-        accessibilityValue={{
-          min: 1,
-          max: TOTAL_STEPS,
-          now: progressStepNumber,
-        }}
-        accessibilityLabel={`Onboarding step ${progressStepNumber} of ${TOTAL_STEPS}`}
-      >
-        <View style={styles.progressTrack}>
-          <LinearGradient
-            colors={['#7BA6FF', colors.primary]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={[
-              styles.progressFill,
-              { width: `${Math.min(1, progressRatio) * 100}%` },
-            ]}
-          />
-        </View>
-        <Text style={styles.progressCaption}>
-          Step {progressStepNumber} of {TOTAL_STEPS}
-        </Text>
-      </View>
+      <OnboardingProgressBlock
+        padH={padH}
+        step={progressStepNumber}
+        totalSteps={TOTAL_STEPS}
+        title='Intro'
+        progressRatio={progressRatio}
+      />
 
       <Text
         style={[styles.pageEyebrow, { paddingHorizontal: padH }]}
@@ -382,27 +364,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   backBtnPressed: { opacity: 0.55 },
-  progressBlock: {
-    paddingBottom: space.md,
-    width: '100%',
-  },
-  progressTrack: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#E5E5EA',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  progressCaption: {
-    marginTop: space.sm,
-    fontSize: type.caption,
-    fontWeight: '600',
-    color: captionMuted,
-    letterSpacing: -0.1,
-  },
   scrollContent: {
     paddingTop: space.xs,
   },

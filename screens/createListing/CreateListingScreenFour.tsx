@@ -4,8 +4,10 @@ import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ListingProgressBlock } from '../../components/ListingProgressBlock';
+import { OnboardingNavHeader } from '../../components/OnboardingNavHeader';
 import { useOnboardingCtaLayout } from '../../design/onboardingCtaLayout';
-import { colors, gradientPrimaryHorizontal, radius, space, type } from '../../design/theme';
+import { colors, radius, space, type } from '../../design/theme';
 import { CreateListingPrimaryCta } from './CreateListingPrimaryCta';
 import {
   BOTTOM_CTA_SCROLL_CLEARANCE,
@@ -16,7 +18,6 @@ import {
   labelSecondary,
   LISTING_TOTAL_STEPS,
   pageBg,
-  progressTrackBg,
   required,
   STEP_LAYOUTS,
   white,
@@ -28,6 +29,8 @@ export type CreateListingScreenFourProps = {
   onClose: () => void;
   onBack: () => void;
   onContinue: () => void;
+  /** Omit nav, progress bar, footer; parent ScrollView supplies scroll. */
+  embedInUnifiedList?: boolean;
 };
 
 /** Room-type rows from step 3 that need their own layout tile (Entire Unit uses the default hero slot). */
@@ -43,6 +46,7 @@ export function CreateListingScreenFour({
   onClose,
   onBack,
   onContinue,
+  embedInUnifiedList = false,
 }: CreateListingScreenFourProps) {
   const insets = useSafeAreaInsets();
   const { padH, contentMaxW, primaryButtonWidth } = useOnboardingCtaLayout();
@@ -59,10 +63,7 @@ export function CreateListingScreenFour({
     [fromStep3, dismissedRowIds],
   );
 
-  const stepValid = useMemo(() => {
-    if (!entireUnitFilled) return false;
-    return visibleRoomLayouts.every((r) => layoutFilledByRowId[r.id] === true);
-  }, [entireUnitFilled, visibleRoomLayouts, layoutFilledByRowId]);
+  const canContinue = Boolean(entireUnitFilled);
 
   const progressFraction = STEP_LAYOUTS / LISTING_TOTAL_STEPS;
 
@@ -82,72 +83,8 @@ export function CreateListingScreenFour({
     });
   };
 
-  return (
-    <View style={styles.root}>
-      <StatusBar style='dark' />
-      <View
-        style={[
-          styles.headerBar,
-          {
-            paddingTop: insets.top + space.md,
-            paddingHorizontal: padH,
-          },
-        ]}
-      >
-        <View style={styles.headerRow}>
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel='Go back'
-            hitSlop={10}
-            onPress={onBack}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.headerButtonPressed,
-            ]}
-          >
-            <Ionicons name='arrow-back' size={22} color={ink} />
-          </Pressable>
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel='Close'
-            hitSlop={10}
-            onPress={onClose}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.headerButtonPressed,
-            ]}
-          >
-            <Ionicons name='close' size={22} color={ink} />
-          </Pressable>
-        </View>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={{
-          paddingTop: space.sm,
-          paddingBottom: insets.bottom + BOTTOM_CTA_SCROLL_CLEARANCE,
-          paddingHorizontal: padH,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
+  const listingLayoutsForm = (
         <View style={[styles.contentNarrow, { maxWidth: contentMaxW }]}>
-          <View style={[styles.progressBlock, { width: innerW, alignSelf: 'center' }]}>
-            <View style={styles.progressTrack}>
-              <LinearGradient
-                colors={gradientPrimaryHorizontal}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={[
-                  styles.progressFill,
-                  { width: `${Math.min(100, progressFraction * 100)}%` },
-                ]}
-              />
-            </View>
-            <Text style={styles.progressCaption}>
-              {`Step ${STEP_LAYOUTS} of ${LISTING_TOTAL_STEPS} · Layouts`}
-            </Text>
-          </View>
-
           <Text style={[styles.sectionLabel, { width: innerW, alignSelf: 'center' }]}>
             Entire Unit <Text style={styles.asterisk}>*</Text>
           </Text>
@@ -185,7 +122,7 @@ export function CreateListingScreenFour({
                   { width: innerW, alignSelf: 'center', marginTop: space.xl },
                 ]}
               >
-                Room layouts
+                Room layouts <Text style={styles.optionalHint}>(Optional)</Text>
               </Text>
               <View
                 style={[
@@ -208,7 +145,7 @@ export function CreateListingScreenFour({
                           onPress={() => dismissRoomLayout(row.id)}
                           style={({ pressed }) => [
                             styles.miniDismiss,
-                            pressed && styles.headerButtonPressed,
+                            pressed && styles.navPressed,
                           ]}
                         >
                           <Ionicons name='remove' size={18} color={ink} />
@@ -243,6 +180,48 @@ export function CreateListingScreenFour({
             </>
           ) : null}
         </View>
+  );
+
+  if (embedInUnifiedList) {
+    return (
+      <ScrollView
+        scrollEnabled={false}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+        style={{ backgroundColor: pageBg }}
+        contentContainerStyle={{
+          paddingTop: space.lg,
+          paddingBottom: space.xxl,
+          paddingHorizontal: padH,
+        }}
+      >
+        {listingLayoutsForm}
+      </ScrollView>
+    );
+  }
+
+  return (
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <StatusBar style='dark' />
+      <OnboardingNavHeader padH={padH} onBack={onBack} onClose={onClose} />
+
+      <ListingProgressBlock
+        padH={padH}
+        step={STEP_LAYOUTS}
+        title='Layouts'
+        progressRatio={progressFraction}
+      />
+
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={{
+          paddingTop: space.sm,
+          paddingBottom: insets.bottom + BOTTOM_CTA_SCROLL_CLEARANCE,
+          paddingHorizontal: padH,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        {listingLayoutsForm}
       </ScrollView>
 
       <View
@@ -250,13 +229,17 @@ export function CreateListingScreenFour({
         style={[styles.bottomDock, { paddingBottom: insets.bottom + space.md }]}
       >
         <LinearGradient
+          pointerEvents='none'
           colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.98)']}
           style={StyleSheet.absoluteFill}
         />
         <CreateListingPrimaryCta
+          key={canContinue ? 'continue-on' : 'continue-off'}
           label='Continue'
-          disabled={!stepValid}
-          onPress={onContinue}
+          disabled={!canContinue}
+          onPress={() => {
+            if (canContinue) onContinue();
+          }}
           width={primaryButtonWidth}
         />
       </View>
@@ -269,61 +252,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: pageBg,
   },
-  headerBar: {
-    backgroundColor: pageBg,
-    zIndex: 2,
+  flex: {
+    flex: 1,
   },
-  headerRow: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0F172A',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.08,
-        shadowRadius: 18,
-      },
-      android: { elevation: 2 },
-    }),
-  },
-  headerButtonPressed: {
-    opacity: 0.7,
+  navPressed: {
+    opacity: 0.55,
   },
   contentNarrow: {
     width: '100%',
     alignSelf: 'center',
-  },
-  progressBlock: {
-    marginBottom: space.lg,
-  },
-  progressTrack: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: progressTrackBg,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  progressCaption: {
-    marginTop: space.sm,
-    fontSize: type.caption,
-    fontWeight: '600',
-    color: captionMuted,
-    letterSpacing: -0.1,
   },
   sectionLabel: {
     fontSize: type.caption,
@@ -336,6 +273,11 @@ const styles = StyleSheet.create({
   asterisk: {
     color: required,
     fontWeight: '600',
+  },
+  optionalHint: {
+    textTransform: 'none',
+    fontWeight: '500',
+    color: captionMuted,
   },
   entireUnitSlot: {
     aspectRatio: 4 / 3,

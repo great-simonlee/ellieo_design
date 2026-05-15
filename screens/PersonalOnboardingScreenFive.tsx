@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { OnboardingProgressBlock } from '../components/OnboardingProgressBlock';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -158,31 +158,13 @@ export function PersonalOnboardingScreenFive({
         </Pressable>
       </View>
 
-      <View
-        style={[styles.progressBlock, { paddingHorizontal: padH }]}
-        accessibilityRole='progressbar'
-        accessibilityValue={{
-          min: 1,
-          max: ONBOARDING_TOTAL_STEPS,
-          now: onboardingStepNumber,
-        }}
-        accessibilityLabel={`Onboarding step ${onboardingStepNumber} of ${ONBOARDING_TOTAL_STEPS}`}
-      >
-        <View style={styles.progressTrack}>
-          <LinearGradient
-            colors={['#7BA6FF', colors.primary]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={[
-              styles.progressFill,
-              { width: `${Math.min(1, progressRatio) * 100}%` },
-            ]}
-          />
-        </View>
-        <Text style={styles.progressCaption}>
-          Step {onboardingStepNumber} of {ONBOARDING_TOTAL_STEPS}
-        </Text>
-      </View>
+      <OnboardingProgressBlock
+        padH={padH}
+        step={onboardingStepNumber}
+        totalSteps={ONBOARDING_TOTAL_STEPS}
+        title='Introduce yourself'
+        progressRatio={progressRatio}
+      />
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -327,27 +309,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary,
     letterSpacing: -0.2,
-  },
-  progressBlock: {
-    paddingBottom: space.md,
-    width: '100%',
-  },
-  progressTrack: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#E5E5EA',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  progressCaption: {
-    marginTop: space.sm,
-    fontSize: type.caption,
-    fontWeight: '600',
-    color: captionMuted,
-    letterSpacing: -0.1,
   },
   scrollContent: {
     paddingTop: space.sm,

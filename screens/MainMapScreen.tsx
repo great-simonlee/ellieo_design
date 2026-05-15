@@ -19,7 +19,10 @@ import { useOnboardingCtaLayout } from '../design/onboardingCtaLayout';
 import { colors, radius, space, type } from '../design/theme';
 import { useAuthLayout } from './auth/useAuthLayout';
 import { CreateListingScreen } from './CreateListingScreen';
+import { CreateListingUnifiedScreen } from './CreateListingUnifiedScreen';
+import { PersonalOnboardingScreenSeven } from './PersonalOnboardingScreenSeven';
 import { ProfileMenuScreen } from './ProfileMenuScreen';
+import { SavedListingsScreen } from './SavedListingsScreen';
 import { YourListingsScreen } from './YourListingsScreen';
 
 const ink = '#1C1C1E';
@@ -35,7 +38,13 @@ const PIN_POSITIONS = [
 ];
 
 type FooterTab = 'rooms' | 'match' | 'messages';
-type ProfileRoute = 'menu' | 'listings' | 'createListing';
+type ProfileRoute =
+  | 'menu'
+  | 'listings'
+  | 'savedListings'
+  | 'lifestylePreferences'
+  | 'createListing'
+  | 'editListing';
 
 export type MainMapScreenProps = {
   /** Return to welcome / auth (design preview). */
@@ -340,11 +349,34 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
       );
     }
 
+    if (profileRoute === 'editListing') {
+      return (
+        <CreateListingUnifiedScreen onClose={() => setProfileRoute('listings')} />
+      );
+    }
+
     if (profileRoute === 'listings') {
       return (
         <YourListingsScreen
           onBack={() => setProfileRoute('menu')}
           onCreateListing={() => setProfileRoute('createListing')}
+          onEditListing={() => setProfileRoute('editListing')}
+        />
+      );
+    }
+
+    if (profileRoute === 'savedListings') {
+      return (
+        <SavedListingsScreen onBack={() => setProfileRoute('menu')} />
+      );
+    }
+
+    if (profileRoute === 'lifestylePreferences') {
+      return (
+        <PersonalOnboardingScreenSeven
+          mode='profile'
+          onBack={() => setProfileRoute('menu')}
+          onComplete={() => setProfileRoute('menu')}
         />
       );
     }
@@ -358,6 +390,10 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
           setProfileMenuVisible(false);
         }}
         onOpenListings={() => setProfileRoute('listings')}
+        onOpenSavedListings={() => setProfileRoute('savedListings')}
+        onOpenLifestylePreferences={() =>
+          setProfileRoute('lifestylePreferences')
+        }
       />
     );
   }

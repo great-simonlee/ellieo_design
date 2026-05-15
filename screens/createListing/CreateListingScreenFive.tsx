@@ -10,6 +10,7 @@ export type CreateListingScreenFiveProps = {
   onClose: () => void;
   onBack: () => void;
   onContinue: () => void;
+  embedInUnifiedList?: boolean;
 };
 
 /** Step 5: Amenity, room features, and utility — one scrollable screen. */
@@ -17,20 +18,22 @@ export function CreateListingScreenFive({
   onClose,
   onBack,
   onContinue,
+  embedInUnifiedList = false,
 }: CreateListingScreenFiveProps) {
   return (
     <CreateListingChipSelectScreen
       step={STEP_LISTING_TAGS}
-      progressCaptionSuffix='Tags & inclusions'
+      progressCaptionSuffix='Amenities, Features, and Utility'
       sections={[
         { title: 'Building & community', items: LISTING_AMENITIES },
         { title: 'Inside your unit', items: LISTING_ROOM_FEATURES },
         { title: "What's covered in rent", items: LISTING_UTILITIES },
       ]}
-      requireEachSection
+      requireAtLeastOne={false}
       onClose={onClose}
       onBack={onBack}
       onContinue={onContinue}
+      embedInUnifiedList={embedInUnifiedList}
     />
   );
 }

@@ -4,8 +4,10 @@ import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ListingProgressBlock } from '../../components/ListingProgressBlock';
+import { OnboardingNavHeader } from '../../components/OnboardingNavHeader';
 import { useOnboardingCtaLayout } from '../../design/onboardingCtaLayout';
-import { colors, gradientPrimaryHorizontal, radius, space, type } from '../../design/theme';
+import { colors, radius, space, type } from '../../design/theme';
 import { CreateListingPrimaryCta } from './CreateListingPrimaryCta';
 import {
   BOTTOM_CTA_SCROLL_CLEARANCE,
@@ -16,7 +18,6 @@ import {
   labelSecondary,
   LISTING_TOTAL_STEPS,
   pageBg,
-  progressTrackBg,
   white,
 } from './createListingTokens';
 import type { ListingChipDef } from './listingStepChipsData';
@@ -32,6 +33,7 @@ export type CreateListingChipSelectScreenProps = {
   onContinue: () => void;
   requireAtLeastOne?: boolean;
   requireEachSection?: boolean;
+  embedInUnifiedList?: boolean;
 };
 
 export function CreateListingChipSelectScreen({
@@ -43,6 +45,7 @@ export function CreateListingChipSelectScreen({
   onContinue,
   requireAtLeastOne = true,
   requireEachSection = false,
+  embedInUnifiedList = false,
 }: CreateListingChipSelectScreenProps) {
   const insets = useSafeAreaInsets();
   const { padH, contentMaxW, primaryButtonWidth } = useOnboardingCtaLayout();
@@ -70,74 +73,8 @@ export function CreateListingChipSelectScreen({
   const progressFraction = step / LISTING_TOTAL_STEPS;
   const chipGap = space.sm;
 
-  return (
-    <View style={styles.root}>
-      <StatusBar style='dark' />
-      <View
-        style={[
-          styles.headerBar,
-          {
-            paddingTop: insets.top + space.md,
-            paddingHorizontal: padH,
-          },
-        ]}
-      >
-        <View style={styles.headerRow}>
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel='Go back'
-            hitSlop={10}
-            onPress={onBack}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.headerButtonPressed,
-            ]}
-          >
-            <Ionicons name='arrow-back' size={22} color={ink} />
-          </Pressable>
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel='Close'
-            hitSlop={10}
-            onPress={onClose}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && styles.headerButtonPressed,
-            ]}
-          >
-            <Ionicons name='close' size={22} color={ink} />
-          </Pressable>
-        </View>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={{
-          paddingTop: space.sm,
-          paddingBottom: insets.bottom + BOTTOM_CTA_SCROLL_CLEARANCE,
-          paddingHorizontal: padH,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
+  const chipsForm = (
         <View style={[styles.contentNarrow, { maxWidth: contentMaxW }]}>
-          <View style={[styles.progressBlock, { width: innerW, alignSelf: 'center' }]}>
-            <View style={styles.progressTrackShell}>
-              <View style={styles.progressTrack}>
-                <LinearGradient
-                  colors={gradientPrimaryHorizontal}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={[
-                    styles.progressFill,
-                    { width: `${Math.min(100, progressFraction * 100)}%` },
-                  ]}
-                />
-              </View>
-            </View>
-            <Text style={styles.progressCaption}>
-              {`Step ${step} of ${LISTING_TOTAL_STEPS} · ${progressCaptionSuffix}`}
-            </Text>
-          </View>
-
           {sections.map((section, sectionIndex) => (
             <View
               key={section.title}
@@ -180,6 +117,50 @@ export function CreateListingChipSelectScreen({
             </View>
           ))}
         </View>
+  );
+
+  if (embedInUnifiedList) {
+    return (
+      <ScrollView
+        scrollEnabled={false}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+        style={{ backgroundColor: pageBg }}
+        keyboardShouldPersistTaps='handled'
+        contentContainerStyle={{
+          paddingTop: space.lg,
+          paddingBottom: space.xxl,
+          paddingHorizontal: padH,
+        }}
+      >
+        {chipsForm}
+      </ScrollView>
+    );
+  }
+
+  return (
+    <View style={[styles.root, { paddingTop: insets.top }]}>
+      <StatusBar style='dark' />
+      <OnboardingNavHeader padH={padH} onBack={onBack} onClose={onClose} />
+
+      <ListingProgressBlock
+        padH={padH}
+        step={step}
+        title={progressCaptionSuffix}
+        progressRatio={progressFraction}
+      />
+
+      <ScrollView
+        style={styles.flex}
+        keyboardShouldPersistTaps='handled'
+        contentContainerStyle={{
+          paddingTop: space.sm,
+          paddingBottom: insets.bottom + BOTTOM_CTA_SCROLL_CLEARANCE,
+          paddingHorizontal: padH,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        {chipsForm}
       </ScrollView>
 
       <View
@@ -206,61 +187,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: pageBg,
   },
-  headerBar: {
-    backgroundColor: pageBg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(60, 60, 67, 0.1)',
-    zIndex: 2,
-  },
-  headerRow: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: fieldFill,
-    borderWidth: 1,
-    borderColor: 'rgba(60, 60, 67, 0.08)',
-  },
-  headerButtonPressed: {
-    opacity: 0.75,
+  flex: {
+    flex: 1,
   },
   contentNarrow: {
     width: '100%',
     alignSelf: 'center',
-  },
-  progressBlock: {
-    marginBottom: space.xl,
-  },
-  progressTrackShell: {
-    padding: 2,
-    borderRadius: 6,
-    backgroundColor: fieldFill,
-    borderWidth: 1,
-    borderColor: fieldBorder,
-  },
-  progressTrack: {
-    height: 4,
-    borderRadius: 3,
-    backgroundColor: progressTrackBg,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  progressCaption: {
-    marginTop: space.sm,
-    fontSize: type.caption,
-    fontWeight: '600',
-    color: labelSecondary,
-    letterSpacing: -0.08,
   },
   /** No card border — sections sit flush on the page like the reference. */
   sectionBlock: {},
