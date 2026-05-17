@@ -23,6 +23,7 @@ import {
   type,
 } from '../design/theme';
 import { LifestyleProfileReadout } from './LifestyleProfileReadout';
+import { MatchCelebrationModal } from './MatchCelebrationModal';
 import type { RoommateProfile } from './RoommateProfileDetail';
 
 const ink = '#0F172A';
@@ -49,6 +50,27 @@ const MOCK_SCHOOL_LOGOS = {
   nyu: require('../assets/img/mock/nyu_logo.png'),
 } as const;
 
+/** Full profile only — expand acronyms for display (logos still keyed on raw `school`). */
+const SCHOOL_DISPLAY_NAMES: Record<string, string> = {
+  nyu: 'New York University',
+  mit: 'Massachusetts Institute of Technology',
+  fit: 'Fashion Institute of Technology',
+  columbia: 'Columbia University',
+  parsons: 'Parsons School of Design',
+  pratt: 'Pratt Institute',
+};
+
+function schoolDisplayName(school: string): string {
+  const trimmed = school.trim();
+  const key = trimmed.toLowerCase();
+  if (SCHOOL_DISPLAY_NAMES[key]) return SCHOOL_DISPLAY_NAMES[key];
+  if (key.includes('new york university')) return 'New York University';
+  if (key.includes('massachusetts institute of technology')) {
+    return 'Massachusetts Institute of Technology';
+  }
+  return trimmed;
+}
+
 function schoolLogoFor(profile: RoommateProfile) {
   if (profile.schoolLogo) return profile.schoolLogo;
   const key = profile.school.trim().toLowerCase();
@@ -62,12 +84,18 @@ type MatchFullProfileSheetProps = {
   profile: RoommateProfile | null;
   padH: number;
   onClose: () => void;
+  onSayHi?: () => void;
+  celebrationProfile?: RoommateProfile | null;
+  onCelebrationClose?: () => void;
 };
 
 export function MatchFullProfileSheet({
   profile,
   padH,
   onClose,
+  onSayHi,
+  celebrationProfile = null,
+  onCelebrationClose,
 }: MatchFullProfileSheetProps) {
   const visible = profile !== null;
   const insets = useSafeAreaInsets();
@@ -109,7 +137,9 @@ export function MatchFullProfileSheet({
               { paddingBottom: footerH + space.xl },
             ]}
             showsVerticalScrollIndicator={false}
-            bounces
+            bounces={false}
+            alwaysBounceVertical={false}
+            overScrollMode='never'
           >
             <View style={[styles.hero, { height: heroH }]}>
               <ScrollView
@@ -179,8 +209,8 @@ export function MatchFullProfileSheet({
                       <Ionicons name='school-outline' size={12} color={white} />
                     </View>
                   )}
-                  <Text style={styles.heroSchool} numberOfLines={1}>
-                    {profile.school}
+                  <Text style={styles.heroSchool} numberOfLines={2}>
+                    {schoolDisplayName(profile.school)}
                   </Text>
                 </View>
               </View>
@@ -335,7 +365,7 @@ export function MatchFullProfileSheet({
             <Pressable
               accessibilityRole='button'
               accessibilityLabel={`Say hi to ${profile.name}`}
-              onPress={onClose}
+              onPress={onSayHi ?? onClose}
               style={({ pressed }) => [styles.ctaShell, pressed && styles.ctaPressed]}
             >
               <LinearGradient
@@ -357,6 +387,12 @@ export function MatchFullProfileSheet({
               </LinearGradient>
             </Pressable>
           </View>
+
+          <MatchCelebrationModal
+            presentation='embedded'
+            profile={celebrationProfile}
+            onClose={onCelebrationClose ?? (() => {})}
+          />
         </View>
       ) : null}
     </Modal>
@@ -367,6 +403,7 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: canvas,
+    overflow: 'hidden',
   },
   scroll: {
     flex: 1,

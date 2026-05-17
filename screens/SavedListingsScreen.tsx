@@ -9,7 +9,6 @@ import {
   Easing,
   Image,
   ImageSourcePropType,
-  LayoutChangeEvent,
   Modal,
   Platform,
   Pressable,
@@ -34,9 +33,13 @@ const pageBg = '#F5F7FF';
 const cardBorder = 'rgba(31,41,55,0.08)';
 const white = '#FFFFFF';
 
-/** Until `onLayout` runs, thumb height uses this (px). Width stays fixed for stable text measure. */
-const SAVED_THUMB_FALLBACK = 72;
+/** Fixed thumb — avoids per-card `onLayout` resize flicker on first paint. */
 const SAVED_THUMB_W = 88;
+const SAVED_THUMB_H = 104;
+const SAVED_THUMB_RADIUS = Math.min(
+  radius.lg + 2,
+  Math.max(radius.sm, Math.floor(Math.min(SAVED_THUMB_W, SAVED_THUMB_H) / 5)),
+);
 
 export type SavedListing = {
   id: string;
@@ -193,26 +196,11 @@ function SavedListingCard({
   listing: SavedListing;
   onUnlikePress: () => void;
 }) {
-  const [infoBlockHeight, setInfoBlockHeight] = useState<number | null>(null);
   const roomsNormalized = listing.roomPrices.slice(0, 3);
   const showRoomBreakdown =
     roomsNormalized.length > 1 ||
     (roomsNormalized.length === 1 &&
       roomsNormalized[0].price.trim() !== listing.entireUnitPrice.trim());
-
-  const thumbH = Math.max(48, infoBlockHeight ?? SAVED_THUMB_FALLBACK);
-  const thumbRadius = Math.min(
-    radius.lg + 2,
-    Math.max(radius.sm, Math.floor(Math.min(SAVED_THUMB_W, thumbH) / 5)),
-  );
-
-  const onInfoBlockLayout = useCallback((e: LayoutChangeEvent) => {
-    const h = e.nativeEvent.layout.height;
-    if (h <= 0) return;
-    setInfoBlockHeight((prev) =>
-      prev != null && Math.abs(prev - h) < 0.5 ? prev : Math.round(h),
-    );
-  }, []);
 
   return (
     <View style={styles.card}>
@@ -229,27 +217,15 @@ function SavedListingCard({
         <Ionicons name='heart' size={24} color={colors.coral} />
       </Pressable>
       <View style={styles.rowTop}>
-        <View
-          style={[
-            styles.thumbnailWrap,
-            {
-              width: SAVED_THUMB_W,
-              height: thumbH,
-              borderRadius: thumbRadius,
-            },
-          ]}
-        >
+        <View style={styles.thumbnailWrap}>
           <Image
             source={listing.image}
             resizeMode='cover'
-            style={[
-              styles.thumbnail,
-              { borderRadius: thumbRadius },
-            ]}
+            style={styles.thumbnail}
           />
         </View>
         <View style={styles.mainCol}>
-          <View style={styles.titleBlock} onLayout={onInfoBlockLayout}>
+          <View style={styles.titleBlock}>
             <Text style={styles.cardTitle} numberOfLines={2}>
               {listing.title}
             </Text>
@@ -419,13 +395,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   thumbnailWrap: {
+    width: SAVED_THUMB_W,
+    height: SAVED_THUMB_H,
+    borderRadius: SAVED_THUMB_RADIUS,
     overflow: 'hidden',
     position: 'relative',
     flexShrink: 0,
+    backgroundColor: '#E5E7EB',
   },
   thumbnail: {
-    width: '100%',
-    height: '100%',
+    width: SAVED_THUMB_W,
+    height: SAVED_THUMB_H,
+    borderRadius: SAVED_THUMB_RADIUS,
     backgroundColor: '#E5E7EB',
   },
   cardUnlikeHeart: {
@@ -451,7 +432,9 @@ const styles = StyleSheet.create({
   },
   titleBlock: {
     minWidth: 0,
+    minHeight: SAVED_THUMB_H,
     gap: 2,
+    justifyContent: 'flex-start',
   },
   cardTitle: {
     fontSize: type.bodyLarge,

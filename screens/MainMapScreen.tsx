@@ -19,10 +19,13 @@ import { useOnboardingCtaLayout } from '../design/onboardingCtaLayout';
 import { colors, radius, space, type } from '../design/theme';
 import { useAuthLayout } from './auth/useAuthLayout';
 import { MatchScreen } from './MatchScreen';
+import { MatchSetupFlow } from './matchSetup/MatchSetupFlow';
 import { CreateListingScreen } from './CreateListingScreen';
 import { CreateListingUnifiedScreen } from './CreateListingUnifiedScreen';
 import { PersonalOnboardingScreenSeven } from './PersonalOnboardingScreenSeven';
 import { ProfileMenuScreen } from './ProfileMenuScreen';
+import { RoommatePreferencesReviewScreen } from './RoommatePreferencesReviewScreen';
+import { AccountSettingsScreen } from './AccountSettingsScreen';
 import { SavedListingsScreen } from './SavedListingsScreen';
 import { YourListingsScreen } from './YourListingsScreen';
 
@@ -44,6 +47,8 @@ type ProfileRoute =
   | 'listings'
   | 'savedListings'
   | 'lifestylePreferences'
+  | 'roommatePreferencesReview'
+  | 'accountSettings'
   | 'createListing'
   | 'editListing';
 
@@ -241,9 +246,13 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
   const { padH, primaryButtonWidth } = useOnboardingCtaLayout();
   const { sheetCornerRadius } = useAuthLayout();
   const [activeTab, setActiveTab] = useState<FooterTab>('rooms');
+  const [matchSetupComplete, setMatchSetupComplete] = useState(false);
   const [isSheetExpanded, setIsSheetExpanded] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   const [profileRoute, setProfileRoute] = useState<ProfileRoute>('menu');
+  const [activelyLooking, setActivelyLooking] = useState(true);
+  const [roommateReviewVisible, setRoommateReviewVisible] = useState(false);
+  const [shouldReviewOnReactivate, setShouldReviewOnReactivate] = useState(false);
   const [tabBarH, setTabBarH] = useState(
     52 + space.sm + Math.max(insets.bottom, space.sm),
   );
@@ -333,6 +342,19 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
     [dragScale, sheetAnim, snapSheetAnimTo],
   );
 
+  const handleActivelyLookingChange = (next: boolean) => {
+    if (next) {
+      setActivelyLooking(true);
+      if (shouldReviewOnReactivate) {
+        setShouldReviewOnReactivate(false);
+        setRoommateReviewVisible(true);
+      }
+    } else {
+      setActivelyLooking(false);
+      setShouldReviewOnReactivate(true);
+    }
+  };
+
   const expandSheetFullScreen = () => {
     sheetAnim.stopAnimation((v) => {
       const t = typeof v === 'number' ? v : currentSheetProgress.current;
@@ -342,6 +364,7 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
 
   const hasListings = ROOMS_COUNT > 0;
   const mapCollapseButtonWidth = primaryButtonWidth * 0.6;
+  const hideTabBar = activeTab === 'match' && !matchSetupComplete;
 
   if (profileMenuVisible) {
     if (profileRoute === 'createListing') {
@@ -372,6 +395,12 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
       );
     }
 
+    if (profileRoute === 'accountSettings') {
+      return (
+        <AccountSettingsScreen onBack={() => setProfileRoute('menu')} />
+      );
+    }
+
     if (profileRoute === 'lifestylePreferences') {
       return (
         <PersonalOnboardingScreenSeven
@@ -382,19 +411,40 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
       );
     }
 
+    if (profileRoute === 'roommatePreferencesReview') {
+      return (
+        <RoommatePreferencesReviewScreen
+          onBack={() => setProfileRoute('menu')}
+          onDone={() => setProfileRoute('menu')}
+          onEditLifestyle={() => setProfileRoute('lifestylePreferences')}
+          onEditPersonalInfo={() => setProfileRoute('accountSettings')}
+        />
+      );
+    }
+
     return (
       <ProfileMenuScreen
         insets={insets}
         padH={padH}
+        activelyLooking={activelyLooking}
+        onActivelyLookingChange={handleActivelyLookingChange}
+        roommateReviewVisible={roommateReviewVisible}
+        onRoommateReviewKeep={() => setRoommateReviewVisible(false)}
+        onRoommateReviewUpdate={() => {
+          setRoommateReviewVisible(false);
+          setProfileRoute('roommatePreferencesReview');
+        }}
         onClose={() => {
           setProfileRoute('menu');
           setProfileMenuVisible(false);
+          setRoommateReviewVisible(false);
         }}
         onOpenListings={() => setProfileRoute('listings')}
         onOpenSavedListings={() => setProfileRoute('savedListings')}
         onOpenLifestylePreferences={() =>
           setProfileRoute('lifestylePreferences')
         }
+        onOpenAccountSettings={() => setProfileRoute('accountSettings')}
       />
     );
   }
@@ -627,14 +677,21 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
         </>
       ) : activeTab === 'match' ? (
         <View style={styles.matchTab}>
-          <MatchScreen
-            padH={padH}
-            bottomChromeH={tabBarH}
-            onOpenProfile={() => {
-              setProfileRoute('menu');
-              setProfileMenuVisible(true);
-            }}
-          />
+          {matchSetupComplete ? (
+            <MatchScreen
+              padH={padH}
+              bottomChromeH={tabBarH}
+              onOpenProfile={() => {
+                setProfileRoute('menu');
+                setProfileMenuVisible(true);
+              }}
+            />
+          ) : (
+            <MatchSetupFlow
+              onComplete={() => setMatchSetupComplete(true)}
+              onCancel={() => setActiveTab('rooms')}
+            />
+          )}
         </View>
       ) : (
         <View
@@ -650,45 +707,53 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
         </View>
       )}
 
-      <View
-        onLayout={(e) => setTabBarH(e.nativeEvent.layout.height)}
-        style={[
-          styles.tabBar,
-          {
-            paddingBottom: Math.max(insets.bottom, space.sm),
-            paddingHorizontal: padH,
-          },
-        ]}
-      >
-        {FOOTER_TABS.map((tab) => {
-          const selected = activeTab === tab.id;
-          return (
-            <Pressable
-              key={tab.id}
-              accessibilityRole='button'
-              accessibilityLabel={tab.label}
-              accessibilityState={{ selected }}
-              onPress={() => setActiveTab(tab.id)}
-              style={({ pressed }) => [
-                styles.tabItem,
-                pressed && styles.tabItemPressed,
-              ]}
-            >
-              <Ionicons
-                name={selected ? tab.iconActive : tab.icon}
-                size={26}
-                color={selected ? colors.primary : labelSecondary}
-              />
-              <Text
-                style={[styles.tabLabel, selected && styles.tabLabelSelected]}
-                numberOfLines={1}
+      {!hideTabBar ? (
+        <View
+          onLayout={(e) => setTabBarH(e.nativeEvent.layout.height)}
+          style={[
+            styles.tabBar,
+            {
+              paddingBottom: Math.max(insets.bottom, space.sm),
+              paddingHorizontal: padH,
+            },
+          ]}
+        >
+          {FOOTER_TABS.map((tab) => {
+            const selected = activeTab === tab.id;
+            return (
+              <Pressable
+                key={tab.id}
+                accessibilityRole='button'
+                accessibilityLabel={tab.label}
+                accessibilityState={{ selected }}
+                onPress={() => {
+                  if (tab.id === 'match') {
+                    setActiveTab('match');
+                    return;
+                  }
+                  setActiveTab(tab.id);
+                }}
+                style={({ pressed }) => [
+                  styles.tabItem,
+                  pressed && styles.tabItemPressed,
+                ]}
               >
-                {tab.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+                <Ionicons
+                  name={selected ? tab.iconActive : tab.icon}
+                  size={26}
+                  color={selected ? colors.primary : labelSecondary}
+                />
+                <Text
+                  style={[styles.tabLabel, selected && styles.tabLabelSelected]}
+                  numberOfLines={1}
+                >
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }

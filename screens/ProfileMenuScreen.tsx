@@ -12,6 +12,8 @@ import {
   View,
 } from 'react-native';
 import { AppTopBar, appTopBarStyles } from '../components/AppTopBar';
+import { ProfileRoommateLookingCard } from '../components/ProfileRoommateLookingCard';
+import { RoommateLookingReviewModal } from '../components/RoommateLookingReviewModal';
 import { colors, radius, space, type } from '../design/theme';
 
 const ink = '#1C1C1E';
@@ -34,9 +36,15 @@ type ProfileMenuScreenProps = {
   };
   padH: number;
   onClose: () => void;
+  activelyLooking: boolean;
+  onActivelyLookingChange: (next: boolean) => void;
+  roommateReviewVisible: boolean;
+  onRoommateReviewKeep: () => void;
+  onRoommateReviewUpdate: () => void;
   onOpenListings?: () => void;
   onOpenSavedListings?: () => void;
   onOpenLifestylePreferences?: () => void;
+  onOpenAccountSettings?: () => void;
 };
 
 const PROFILE_MENU_ITEMS: ProfileMenuItem[] = [
@@ -68,9 +76,15 @@ export function ProfileMenuScreen({
   insets,
   padH,
   onClose,
+  activelyLooking,
+  onActivelyLookingChange,
+  roommateReviewVisible,
+  onRoommateReviewKeep,
+  onRoommateReviewUpdate,
   onOpenListings,
   onOpenSavedListings,
   onOpenLifestylePreferences,
+  onOpenAccountSettings,
 }: ProfileMenuScreenProps) {
   const [affiliationIndex, setAffiliationIndex] = useState(0);
   const affiliation = PROFILE_AFFILIATIONS[affiliationIndex];
@@ -192,6 +206,11 @@ export function ProfileMenuScreen({
           </Pressable>
         </View>
 
+        <ProfileRoommateLookingCard
+          activelyLooking={activelyLooking}
+          onActivelyLookingChange={onActivelyLookingChange}
+        />
+
         <View style={profileStyles.menuCard}>
           <Text style={profileStyles.sectionKicker}>Manage</Text>
           {PROFILE_MENU_ITEMS.slice(0, 4).map((item, index) => (
@@ -206,7 +225,9 @@ export function ProfileMenuScreen({
                     ? onOpenSavedListings
                     : index === 2
                       ? onOpenLifestylePreferences
-                      : undefined
+                      : index === 3
+                        ? onOpenAccountSettings
+                        : undefined
               }
               style={({ pressed }) => [
                 profileStyles.menuRow,
@@ -253,6 +274,14 @@ export function ProfileMenuScreen({
           ))}
         </View>
       </ScrollView>
+
+      <RoommateLookingReviewModal
+        visible={roommateReviewVisible}
+        padH={padH}
+        bottomInset={insets.bottom}
+        onKeep={onRoommateReviewKeep}
+        onUpdate={onRoommateReviewUpdate}
+      />
     </View>
   );
 }

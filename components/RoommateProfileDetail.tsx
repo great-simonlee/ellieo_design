@@ -75,7 +75,7 @@ export type RoommateProfile = {
   roommatePreference: string;
   /** e.g. `Student preferred`, `Open to both`. */
   statusPreference: string;
-  /** e.g. `Master preferred`, `Open to any options`. */
+  /** e.g. `Master bedroom preferred`, `Open to any room options.`. */
   roomPreference: string;
   /** e.g. `East Village`. */
   preferredLocation: string;
@@ -120,7 +120,7 @@ export const ONBOARDING_PREVIEW_PROFILE: RoommateProfile = {
   moveIn: 'Early Aug 2026',
   roommatePreference: 'Female roommate only',
   statusPreference: 'Student preferred',
-  roomPreference: 'Master preferred',
+  roomPreference: 'Master bedroom preferred',
   preferredLocation: 'East Village',
   matchPct: 94,
   tags: ['Early bird', 'Very tidy', 'Rarely hosts', 'Introvert'],
@@ -409,6 +409,9 @@ type ProfileDetailSheetProps = {
   profile: RoommateProfile | null;
   padH: number;
   onClose: () => void;
+  onSayHi?: () => void;
+  celebrationProfile?: RoommateProfile | null;
+  onCelebrationClose?: () => void;
   variant?: RoommateProfileDetailVariant;
 };
 
@@ -416,6 +419,9 @@ export function ProfileDetailSheet({
   profile,
   padH,
   onClose,
+  onSayHi,
+  celebrationProfile = null,
+  onCelebrationClose,
   variant = 'match',
 }: ProfileDetailSheetProps) {
   const visible = profile !== null;
@@ -425,7 +431,14 @@ export function ProfileDetailSheet({
 
   if (!isPreview) {
     return (
-      <MatchFullProfileSheet profile={profile} padH={padH} onClose={onClose} />
+      <MatchFullProfileSheet
+        profile={profile}
+        padH={padH}
+        onClose={onClose}
+        onSayHi={onSayHi}
+        celebrationProfile={celebrationProfile}
+        onCelebrationClose={onCelebrationClose}
+      />
     );
   }
 
