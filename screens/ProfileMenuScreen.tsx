@@ -11,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { AppTopBar, appTopBarStyles } from '../components/AppTopBar';
 import { colors, radius, space, type } from '../design/theme';
 
 const ink = '#1C1C1E';
@@ -77,44 +78,39 @@ export function ProfileMenuScreen({
   return (
     <View style={profileStyles.root}>
       <StatusBar style='dark' />
-      <View
-        style={[
-          profileStyles.header,
-          { paddingTop: insets.top + space.md, paddingHorizontal: padH },
-        ]}
-      >
-        <Image
-          source={require('../assets/img/ellieo_logo_hori.png')}
-          resizeMode='contain'
-          style={profileStyles.logo}
-        />
-        <View style={profileStyles.headerActions}>
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel='Notifications'
-            hitSlop={10}
-            style={({ pressed }) => [
-              profileStyles.headerIconButton,
-              pressed && profileStyles.headerIconButtonPressed,
-            ]}
-          >
-            <Ionicons name='notifications-outline' size={23} color={ink} />
-            <View style={profileStyles.notificationDot} />
-          </Pressable>
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel='Close profile menu'
-            onPress={onClose}
-            hitSlop={10}
-            style={({ pressed }) => [
-              profileStyles.headerIconButton,
-              pressed && profileStyles.headerIconButtonPressed,
-            ]}
-          >
-            <Ionicons name='close' size={30} color={ink} />
-          </Pressable>
-        </View>
-      </View>
+      <AppTopBar
+        insetTop={insets.top}
+        padH={padH}
+        paddingBottom={space.lg}
+        actions={
+          <>
+            <Pressable
+              accessibilityRole='button'
+              accessibilityLabel='Notifications'
+              hitSlop={10}
+              style={({ pressed }) => [
+                appTopBarStyles.iconButton,
+                pressed && profileStyles.headerIconButtonPressed,
+              ]}
+            >
+              <Ionicons name='notifications-outline' size={22} color={ink} />
+              <View style={profileStyles.notificationDot} />
+            </Pressable>
+            <Pressable
+              accessibilityRole='button'
+              accessibilityLabel='Close profile menu'
+              onPress={onClose}
+              hitSlop={10}
+              style={({ pressed }) => [
+                appTopBarStyles.iconButton,
+                pressed && profileStyles.headerIconButtonPressed,
+              ]}
+            >
+              <Ionicons name='close' size={22} color={ink} />
+            </Pressable>
+          </>
+        }
+      />
 
       <ScrollView
         style={profileStyles.scroll}
@@ -265,29 +261,6 @@ const profileStyles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: space.lg,
-    backgroundColor: '#FFFFFF',
-  },
-  logo: {
-    width: 124,
-    height: 42,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-  },
-  headerIconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   headerIconButtonPressed: {
     backgroundColor: '#F2F2F7',

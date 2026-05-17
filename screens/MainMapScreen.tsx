@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useOnboardingCtaLayout } from '../design/onboardingCtaLayout';
 import { colors, radius, space, type } from '../design/theme';
 import { useAuthLayout } from './auth/useAuthLayout';
+import { MatchScreen } from './MatchScreen';
 import { CreateListingScreen } from './CreateListingScreen';
 import { CreateListingUnifiedScreen } from './CreateListingUnifiedScreen';
 import { PersonalOnboardingScreenSeven } from './PersonalOnboardingScreenSeven';
@@ -624,6 +625,17 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
             </Pressable>
           ) : null}
         </>
+      ) : activeTab === 'match' ? (
+        <View style={styles.matchTab}>
+          <MatchScreen
+            padH={padH}
+            bottomChromeH={tabBarH}
+            onOpenProfile={() => {
+              setProfileRoute('menu');
+              setProfileMenuVisible(true);
+            }}
+          />
+        </View>
       ) : (
         <View
           style={[
@@ -631,9 +643,7 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
             { paddingTop: insets.top + space.xxl, paddingHorizontal: padH },
           ]}
         >
-          <Text style={styles.tabPlaceholderTitle}>
-            {activeTab === 'match' ? 'Match' : 'Messages'}
-          </Text>
+          <Text style={styles.tabPlaceholderTitle}>Messages</Text>
           <Text style={styles.tabPlaceholderMeta}>
             Layout placeholder — design only.
           </Text>
@@ -786,6 +796,11 @@ const floatShadow = Platform.select({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  matchTab: {
+    flex: 1,
+    minHeight: 0,
     backgroundColor: '#FFFFFF',
   },
   mapLayer: {
