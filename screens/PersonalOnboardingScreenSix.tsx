@@ -94,16 +94,20 @@ function UnavailableVerificationRow({
 type SheetState = null | { flow: 'school'; step: 'email' | 'code' };
 
 type PersonalOnboardingScreenSixProps = {
+  /** `settings` — account verification from profile (no progress / skip / CTA). */
+  mode?: 'onboarding' | 'settings';
   onBack: () => void;
   onSkip?: () => void;
   onComplete?: () => void;
 };
 
 export function PersonalOnboardingScreenSix({
+  mode = 'onboarding',
   onBack,
   onSkip,
   onComplete,
 }: PersonalOnboardingScreenSixProps) {
+  const isSettings = mode === 'settings';
   const insets = useSafeAreaInsets();
   const { width: windowW, height: windowH } = useWindowDimensions();
   const { padH, contentMaxW, primaryButtonWidth } = useOnboardingCtaLayout();
@@ -269,13 +273,14 @@ export function PersonalOnboardingScreenSix({
       <View
         style={[
           styles.optionIconRing,
-          schoolDone && styles.optionIconRingDone,
-          !schoolDone && styles.optionIconRingAvailable,
+          schoolDone
+            ? styles.optionIconRingDone
+            : styles.optionIconRingAvailable,
           compactHub && styles.optionIconRingCompact,
         ]}
       >
         <Ionicons
-          name={schoolDone ? 'checkmark' : 'school-outline'}
+          name='school-outline'
           size={compactHub ? 20 : 22}
           color={schoolDone ? '#FFFFFF' : colors.primary}
         />
@@ -310,7 +315,13 @@ export function PersonalOnboardingScreenSix({
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <StatusBar style={sheetOpen || additionalSheetOpen ? 'light' : 'dark'} />
 
-      <View style={[styles.headerRow, { paddingHorizontal: padH }]}>
+      <View
+        style={[
+          styles.headerRow,
+          isSettings && styles.headerRowSettings,
+          { paddingHorizontal: padH },
+        ]}
+      >
         <Pressable
           accessibilityRole='button'
           accessibilityLabel='Go back'
@@ -323,31 +334,35 @@ export function PersonalOnboardingScreenSix({
         >
           <Ionicons name='chevron-back' size={26} color={ink} />
         </Pressable>
-        <Pressable
-          accessibilityRole='button'
-          accessibilityLabel='Skip and continue'
-          onPress={() => {
-            closeSheet();
-            Keyboard.dismiss();
-            (onComplete ?? onSkip)?.();
-          }}
-          hitSlop={12}
-          style={({ pressed }) => [
-            styles.skipBtn,
-            pressed && styles.skipPressed,
-          ]}
-        >
-          <Text style={styles.skipLabel}>Skip</Text>
-        </Pressable>
+        {!isSettings ? (
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel='Skip and continue'
+            onPress={() => {
+              closeSheet();
+              Keyboard.dismiss();
+              (onComplete ?? onSkip)?.();
+            }}
+            hitSlop={12}
+            style={({ pressed }) => [
+              styles.skipBtn,
+              pressed && styles.skipPressed,
+            ]}
+          >
+            <Text style={styles.skipLabel}>Skip</Text>
+          </Pressable>
+        ) : null}
       </View>
 
-      <OnboardingProgressBlock
-        padH={padH}
-        step={onboardingStepNumber}
-        totalSteps={ONBOARDING_TOTAL_STEPS}
-        title='Free credits'
-        progressRatio={progressRatio}
-      />
+      {!isSettings ? (
+        <OnboardingProgressBlock
+          padH={padH}
+          step={onboardingStepNumber}
+          totalSteps={ONBOARDING_TOTAL_STEPS}
+          title='Free credits'
+          progressRatio={progressRatio}
+        />
+      ) : null}
 
       <View style={[styles.flex, styles.mainColumn]}>
         <View
@@ -356,6 +371,7 @@ export function PersonalOnboardingScreenSix({
             {
               paddingHorizontal: padH,
               paddingTop: compactHub ? space.xs : space.sm,
+              paddingBottom: isSettings ? insets.bottom + space.lg : undefined,
             },
           ]}
         >
@@ -367,7 +383,7 @@ export function PersonalOnboardingScreenSix({
               schoolDone && styles.mainContentInnerVerified,
             ]}
           >
-            {schoolDone ? (
+            {schoolDone && !isSettings ? (
               <Animated.View
                 style={[
                   styles.celebrateWrap,
@@ -638,7 +654,9 @@ export function PersonalOnboardingScreenSix({
                 <Text
                   style={[styles.screenTitle, { maxWidth: contentMaxW }]}
                 >
-                  Unlock your free credits!
+                  {isSettings
+                    ? 'Account Verification'
+                    : 'Unlock your free credits!'}
                 </Text>
                 <Text
                   style={[
@@ -653,15 +671,17 @@ export function PersonalOnboardingScreenSix({
                 </Text>
 
                 <View style={styles.verifyBlock}>
-                  <LinearGradient
-                    colors={['#7BA6FF', colors.primary]}
-                    start={{ x: 0, y: 0.5 }}
-                    end={{ x: 1, y: 0.5 }}
-                    style={[
-                      styles.verifyAccentBar,
-                      compactHub && styles.verifyAccentBarCompact,
-                    ]}
-                  />
+                  {!isSettings ? (
+                    <LinearGradient
+                      colors={['#7BA6FF', colors.primary]}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={[
+                        styles.verifyAccentBar,
+                        compactHub && styles.verifyAccentBarCompact,
+                      ]}
+                    />
+                  ) : null}
                   <Text
                     style={[
                       styles.verifyKicker,
@@ -711,72 +731,77 @@ export function PersonalOnboardingScreenSix({
           </View>
         </View>
 
-        {schoolDone ? (
-          <View
-            style={[
-              styles.completionDock,
-              {
-                paddingHorizontal: padH,
-                paddingBottom: insets.bottom + space.sm,
-              },
-            ]}
-          >
-            <Pressable
-              accessibilityRole='button'
-              accessibilityLabel='Additional verification options'
-              onPress={() => setAdditionalSheetOpen(true)}
-              style={({ pressed }) => [
-                styles.completionSecondary,
-                pressed && styles.completionSecondaryPressed,
+        {!isSettings ? (
+          schoolDone ? (
+            <View
+              style={[
+                styles.completionDock,
+                {
+                  paddingHorizontal: padH,
+                  paddingBottom: insets.bottom + space.sm,
+                },
               ]}
             >
-              <Ionicons
-                name='shield-half-outline'
-                size={18}
-                color={colors.primary}
-                style={styles.completionSecondaryIcon}
-              />
-              <Text style={styles.completionSecondaryLabel} numberOfLines={1}>
-                Add verification
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole='button'
-              accessibilityLabel='Continue to next step'
-              onPress={() => onComplete?.()}
-              style={({ pressed }) => [
-                styles.completionPrimaryOuter,
-                pressed && styles.completionPrimaryPressed,
-              ]}
-            >
-              <LinearGradient
-                colors={GRADIENT_ON}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={styles.completionPrimaryGrad}
+              <Pressable
+                accessibilityRole='button'
+                accessibilityLabel='Additional verification options'
+                onPress={() => setAdditionalSheetOpen(true)}
+                style={({ pressed }) => [
+                  styles.completionSecondary,
+                  pressed && styles.completionSecondaryPressed,
+                ]}
               >
-                <Text style={styles.completionPrimaryLabel}>Next</Text>
                 <Ionicons
-                  name='arrow-forward'
+                  name='shield-half-outline'
                   size={18}
-                  color='#FFFFFF'
-                  style={styles.completionPrimaryChevron}
+                  color={colors.primary}
+                  style={styles.completionSecondaryIcon}
                 />
-              </LinearGradient>
-            </Pressable>
-          </View>
-        ) : (
-          <OnboardingBottomCta
-            label='Next'
-            onPress={() => {
-              if (canNext) onComplete?.();
-            }}
-            disabled={!canNext}
-            padH={padH}
-            safeBottomInset={insets.bottom}
-            buttonWidth={primaryButtonWidth}
-          />
-        )}
+                <Text
+                  style={styles.completionSecondaryLabel}
+                  numberOfLines={1}
+                >
+                  Add verification
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole='button'
+                accessibilityLabel='Continue to next step'
+                onPress={() => onComplete?.()}
+                style={({ pressed }) => [
+                  styles.completionPrimaryOuter,
+                  pressed && styles.completionPrimaryPressed,
+                ]}
+              >
+                <LinearGradient
+                  colors={GRADIENT_ON}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={styles.completionPrimaryGrad}
+                >
+                  <Text style={styles.completionPrimaryLabel}>Next</Text>
+                  <Ionicons
+                    name='arrow-forward'
+                    size={18}
+                    color='#FFFFFF'
+                    style={styles.completionPrimaryChevron}
+                  />
+                </LinearGradient>
+              </Pressable>
+            </View>
+          ) : (
+            <OnboardingBottomCta
+              label='Next'
+              onPress={() => {
+                if (canNext) onComplete?.();
+              }}
+              disabled={!canNext}
+              padH={padH}
+              safeBottomInset={insets.bottom}
+              buttonWidth={primaryButtonWidth}
+            />
+          )
+        ) : null}
       </View>
 
       <Modal
@@ -1102,6 +1127,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: space.xs,
+  },
+  headerRowSettings: {
+    justifyContent: 'flex-start',
   },
   backBtn: {
     marginLeft: -space.xs,

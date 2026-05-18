@@ -28,6 +28,8 @@ import { RoommatePreferencesReviewScreen } from './RoommatePreferencesReviewScre
 import { AccountSettingsScreen } from './AccountSettingsScreen';
 import { SavedListingsScreen } from './SavedListingsScreen';
 import { YourListingsScreen } from './YourListingsScreen';
+import { HelpCenterScreen } from './HelpCenterScreen';
+import { LegalScreen } from './LegalScreen';
 
 const ink = '#1C1C1E';
 const labelSecondary = '#636366';
@@ -49,6 +51,8 @@ type ProfileRoute =
   | 'lifestylePreferences'
   | 'roommatePreferencesReview'
   | 'accountSettings'
+  | 'helpCenter'
+  | 'legal'
   | 'createListing'
   | 'editListing';
 
@@ -411,6 +415,14 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
       );
     }
 
+    if (profileRoute === 'helpCenter') {
+      return <HelpCenterScreen onBack={() => setProfileRoute('menu')} />;
+    }
+
+    if (profileRoute === 'legal') {
+      return <LegalScreen onBack={() => setProfileRoute('menu')} />;
+    }
+
     if (profileRoute === 'roommatePreferencesReview') {
       return (
         <RoommatePreferencesReviewScreen
@@ -445,6 +457,14 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
           setProfileRoute('lifestylePreferences')
         }
         onOpenAccountSettings={() => setProfileRoute('accountSettings')}
+        onOpenHelp={() => setProfileRoute('helpCenter')}
+        onOpenLegal={() => setProfileRoute('legal')}
+        onLogout={() => {
+          setProfileMenuVisible(false);
+          setProfileRoute('menu');
+          setRoommateReviewVisible(false);
+          onExit?.();
+        }}
       />
     );
   }

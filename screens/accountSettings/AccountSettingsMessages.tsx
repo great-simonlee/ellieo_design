@@ -21,6 +21,7 @@ export function AccountSettingsMessages({ onBack }: { onBack: () => void }) {
 
   return (
     <SettingsScaffold
+      heroHeader
       title='Messages'
       subtitle='View and manage your conversations with agents and roommates.'
       onBack={onBack}

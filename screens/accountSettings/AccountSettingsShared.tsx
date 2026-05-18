@@ -44,6 +44,8 @@ const profileCardShadow = Platform.select({
 export type SettingsScaffoldProps = {
   title?: string;
   subtitle?: string;
+  /** Large hero title + body (matches Account Verification). */
+  heroHeader?: boolean;
   onBack: () => void;
   headerRight?: ReactNode;
   children: ReactNode;
@@ -54,6 +56,7 @@ export type SettingsScaffoldProps = {
 export function SettingsScaffold({
   title,
   subtitle,
+  heroHeader = false,
   onBack,
   headerRight,
   children,
@@ -61,7 +64,7 @@ export function SettingsScaffold({
   contentStyle,
 }: SettingsScaffoldProps) {
   const insets = useSafeAreaInsets();
-  const { padH } = useOnboardingCtaLayout();
+  const { padH, contentMaxW } = useOnboardingCtaLayout();
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -86,15 +89,37 @@ export function SettingsScaffold({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps='handled'
       >
-        {title ? <Text style={styles.pageTitle}>{title}</Text> : null}
-        {subtitle ? <Text style={styles.pageSubtitle}>{subtitle}</Text> : null}
+        {title ? (
+          <Text
+            style={[
+              heroHeader ? styles.heroTitle : styles.pageTitle,
+              { maxWidth: contentMaxW },
+            ]}
+          >
+            {title}
+          </Text>
+        ) : null}
+        {subtitle ? (
+          <Text
+            style={[
+              heroHeader ? styles.heroSubtitle : styles.pageSubtitle,
+              { maxWidth: contentMaxW },
+            ]}
+          >
+            {subtitle}
+          </Text>
+        ) : null}
         <View style={styles.pageBody}>{children}</View>
       </ScrollView>
       {footer ? (
         <View
           style={[
             styles.footer,
-            { paddingHorizontal: padH, paddingBottom: insets.bottom + space.md },
+            {
+              paddingHorizontal: padH,
+              paddingBottom: insets.bottom + space.md,
+              alignItems: 'center',
+            },
           ]}
         >
           {footer}
@@ -271,16 +296,23 @@ export function SettingsPrimaryButton({
 export function SettingsDangerButton({
   label,
   onPress,
+  width,
 }: {
   label: string;
   onPress?: () => void;
+  /** Match `OnboardingBottomCta` / Personal Information Save width. */
+  width?: number;
 }) {
   return (
     <Pressable
       accessibilityRole='button'
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => [styles.dangerBtnShell, pressed && styles.btnPressed]}
+      style={({ pressed }) => [
+        styles.dangerBtnShell,
+        width != null && { width },
+        pressed && styles.btnPressed,
+      ]}
     >
       <LinearGradient
         colors={[colors.coral, colors.coralDeep]}
@@ -342,6 +374,27 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: labelSecondary,
     letterSpacing: -0.12,
+  },
+  /** Matches Account Verification / Personal Information hero. */
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: ink,
+    letterSpacing: -0.8,
+    lineHeight: 36,
+    marginBottom: space.sm,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  heroSubtitle: {
+    fontSize: type.body,
+    lineHeight: 22,
+    color: labelSecondary,
+    fontWeight: '400',
+    letterSpacing: -0.2,
+    marginBottom: space.lg,
+    alignSelf: 'center',
+    width: '100%',
   },
   pageBody: {
     gap: space.lg,

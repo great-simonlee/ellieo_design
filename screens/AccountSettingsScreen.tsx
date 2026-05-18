@@ -7,6 +7,7 @@ import { AccountSettingsPersonalInfo } from './accountSettings/AccountSettingsPe
 import { AccountSettingsPlanBilling } from './accountSettings/AccountSettingsPlanBilling';
 import { AccountSettingsPrivacy } from './accountSettings/AccountSettingsPrivacy';
 import { AccountSettingsVerification } from './accountSettings/AccountSettingsVerification';
+import { PersonalOnboardingScreenFour } from './PersonalOnboardingScreenFour';
 import type { AccountSettingsRoute } from './accountSettings/types';
 
 export type AccountSettingsScreenProps = {
@@ -17,11 +18,25 @@ export function AccountSettingsScreen({ onBack }: AccountSettingsScreenProps) {
   const [route, setRoute] = useState<AccountSettingsRoute>('hub');
 
   const goHub = useCallback(() => setRoute('hub'), []);
-  const handleBack = route === 'hub' ? onBack : goHub;
+  const goPersonalInfo = useCallback(() => setRoute('personalInfo'), []);
+
+  const handleBack =
+    route === 'hub'
+      ? onBack
+      : route === 'updatePhotos'
+        ? goPersonalInfo
+        : goHub;
 
   switch (route) {
     case 'personalInfo':
-      return <AccountSettingsPersonalInfo onBack={handleBack} />;
+      return (
+        <AccountSettingsPersonalInfo
+          onBack={handleBack}
+          onOpenPhotos={() => setRoute('updatePhotos')}
+        />
+      );
+    case 'updatePhotos':
+      return <PersonalOnboardingScreenFour mode='settings' onBack={handleBack} />;
     case 'verification':
       return <AccountSettingsVerification onBack={handleBack} />;
     case 'privacy':

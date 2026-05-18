@@ -110,16 +110,20 @@ function compactSlots(values: (string | null)[]): (string | null)[] {
 }
 
 type PersonalOnboardingScreenFourProps = {
+  /** `settings` — account personal info photos (no progress / skip). */
+  mode?: 'onboarding' | 'settings';
   onBack: () => void;
   onSkip?: () => void;
   onContinue?: () => void;
 };
 
 export function PersonalOnboardingScreenFour({
+  mode = 'onboarding',
   onBack,
   onSkip,
   onContinue,
 }: PersonalOnboardingScreenFourProps) {
+  const isSettings = mode === 'settings';
   const insets = useSafeAreaInsets();
   const { height: windowH } = useWindowDimensions();
   const { padH, contentMaxW, primaryButtonWidth } = useOnboardingCtaLayout();
@@ -357,7 +361,13 @@ export function PersonalOnboardingScreenFour({
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <StatusBar style='dark' />
 
-      <View style={[styles.headerRow, { paddingHorizontal: padH }]}>
+      <View
+        style={[
+          styles.headerRow,
+          isSettings && styles.headerRowSettings,
+          { paddingHorizontal: padH },
+        ]}
+      >
         <Pressable
           accessibilityRole='button'
           accessibilityLabel='Go back'
@@ -370,27 +380,31 @@ export function PersonalOnboardingScreenFour({
         >
           <Ionicons name='chevron-back' size={26} color={ink} />
         </Pressable>
-        <Pressable
-          accessibilityRole='button'
-          accessibilityLabel='Skip photo upload'
-          onPress={() => onSkip?.()}
-          hitSlop={12}
-          style={({ pressed }) => [
-            styles.skipBtn,
-            pressed && styles.skipPressed,
-          ]}
-        >
-          <Text style={styles.skipLabel}>Skip</Text>
-        </Pressable>
+        {!isSettings ? (
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel='Skip photo upload'
+            onPress={() => onSkip?.()}
+            hitSlop={12}
+            style={({ pressed }) => [
+              styles.skipBtn,
+              pressed && styles.skipPressed,
+            ]}
+          >
+            <Text style={styles.skipLabel}>Skip</Text>
+          </Pressable>
+        ) : null}
       </View>
 
-      <OnboardingProgressBlock
-        padH={padH}
-        step={onboardingStepNumber}
-        totalSteps={ONBOARDING_TOTAL_STEPS}
-        title='Photos & video'
-        progressRatio={progressRatio}
-      />
+      {!isSettings ? (
+        <OnboardingProgressBlock
+          padH={padH}
+          step={onboardingStepNumber}
+          totalSteps={ONBOARDING_TOTAL_STEPS}
+          title='Photos & video'
+          progressRatio={progressRatio}
+        />
+      ) : null}
 
       <View
         style={[styles.mainColumn, { paddingHorizontal: padH }]}
@@ -573,9 +587,11 @@ export function PersonalOnboardingScreenFour({
       </View>
 
       <OnboardingBottomCta
-        label='Continue'
+        label={isSettings ? 'Save' : 'Continue'}
         onPress={() => {
-          if (canContinue && !hasDuplicatePhotos) onContinue?.();
+          if (!canContinue || hasDuplicatePhotos) return;
+          if (isSettings) onBack();
+          else onContinue?.();
         }}
         disabled={!canContinue || hasDuplicatePhotos}
         padH={padH}
@@ -638,6 +654,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: space.xs,
+  },
+  headerRowSettings: {
+    justifyContent: 'flex-start',
   },
   backBtn: {
     marginLeft: -space.xs,

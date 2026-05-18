@@ -54,8 +54,10 @@ type FieldScrollKey =
 
 export function AccountSettingsPersonalInfo({
   onBack,
+  onOpenPhotos,
 }: {
   onBack: () => void;
+  onOpenPhotos?: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -236,18 +238,6 @@ export function AccountSettingsPersonalInfo({
         >
           <Ionicons name='chevron-back' size={26} color={ink} />
         </Pressable>
-        <Pressable
-          accessibilityRole='button'
-          accessibilityLabel='Save personal information'
-          onPress={onBack}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.headerSaveBtn,
-            pressed && styles.backBtnPressed,
-          ]}
-        >
-          <Text style={styles.headerSave}>Save</Text>
-        </Pressable>
       </View>
 
       <KeyboardAvoidingView
@@ -310,6 +300,7 @@ export function AccountSettingsPersonalInfo({
           <Pressable
             accessibilityRole='button'
             accessibilityLabel='Update your photos'
+            onPress={onOpenPhotos}
             style={({ pressed }) => [
               styles.photosPromo,
               { maxWidth: contentMaxW },
@@ -720,28 +711,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingBottom: space.xs,
   },
   backBtn: {
     marginLeft: -space.xs,
     padding: space.xs,
     borderRadius: radius.sm,
-  },
-  headerSaveBtn: {
-    paddingVertical: space.xs,
-    paddingHorizontal: space.sm,
+    alignSelf: 'flex-start',
   },
   backBtnPressed: {
     opacity: 0.55,
-  },
-  headerSave: {
-    fontSize: type.bodyLarge,
-    fontWeight: '800',
-    color: colors.primary,
-    letterSpacing: -0.2,
   },
   scrollContent: {
     paddingTop: space.sm,

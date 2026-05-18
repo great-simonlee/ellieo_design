@@ -1,27 +1,31 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { space, type } from '../../design/theme';
+import { StyleSheet, View } from 'react-native';
+import { space } from '../../design/theme';
+import { useOnboardingCtaLayout } from '../../design/onboardingCtaLayout';
 import {
   SettingsDangerButton,
   SettingsFieldLabel,
   SettingsScaffold,
   SettingsTextField,
-  muted,
 } from './AccountSettingsShared';
 
 export function AccountSettingsDeleteAccount({ onBack }: { onBack: () => void }) {
   const [reason, setReason] = useState('');
+  const { primaryButtonWidth } = useOnboardingCtaLayout();
 
   return (
     <SettingsScaffold
+      heroHeader
       title='Delete Account'
+      subtitle='Once you delete your account, your profile, listings, and messages will be permanently removed. This action cannot be undone.'
       onBack={onBack}
-      footer={<SettingsDangerButton label='Delete my account' />}
+      footer={
+        <SettingsDangerButton
+          label='Delete my account'
+          width={primaryButtonWidth}
+        />
+      }
     >
-      <Text style={styles.warning}>
-        Once you delete your account, your profile, listings, and messages will be
-        permanently removed. This action cannot be undone.
-      </Text>
       <View style={styles.fieldGroup}>
         <SettingsFieldLabel>
           Tell us why you&apos;re leaving (helps us improve).
@@ -38,14 +42,6 @@ export function AccountSettingsDeleteAccount({ onBack }: { onBack: () => void })
 }
 
 const styles = StyleSheet.create({
-  warning: {
-    fontSize: type.body,
-    lineHeight: 22,
-    fontWeight: '500',
-    color: muted,
-    letterSpacing: -0.12,
-    marginTop: -space.sm,
-  },
   fieldGroup: {
     gap: space.sm,
   },

@@ -37,7 +37,7 @@ const cardBorder = 'rgba(31,41,55,0.08)';
 const white = '#FFFFFF';
 const expiryAccent = colors.coralDeep;
 
-/** Max linked roommates shown in portfolio / roommate sheet (design shell). */
+/** Max linked roommates shown in listing / roommate sheet (design shell). */
 const MAX_ROOMMATES_PER_LISTING = 5;
 
 type ListingStatus = 'Live' | 'Draft' | 'Attention';
@@ -73,7 +73,8 @@ const SUGGESTED_ROOMMATE = {
   image: require('../assets/img/agent_onboarding.png'),
 };
 
-const INITIAL_LISTINGS: Listing[] = [
+/** Sample listings for design preview (+ in header adds these one at a time). */
+const MOCK_LISTING_TEMPLATES: Listing[] = [
   {
     id: 'west48',
     title: 'W 48th St & 8th Ave',
@@ -193,7 +194,16 @@ export function YourListingsScreen({
 }: YourListingsScreenProps) {
   const insets = useSafeAreaInsets();
   const { padH, primaryButtonWidth } = useOnboardingCtaLayout();
-  const [listings, setListings] = useState<Listing[]>(INITIAL_LISTINGS);
+  const [listings, setListings] = useState<Listing[]>([]);
+
+  const addSampleListing = useCallback(() => {
+    setListings((prev) => {
+      const usedIds = new Set(prev.map((l) => l.id));
+      const next = MOCK_LISTING_TEMPLATES.find((t) => !usedIds.has(t.id));
+      if (!next) return prev;
+      return [...prev, { ...next }];
+    });
+  }, []);
   const [roommateListing, setRoommateListing] = useState<Listing | null>(null);
   const [roommateQuery, setRoommateQuery] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Listing | null>(null);
@@ -247,45 +257,92 @@ export function YourListingsScreen({
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <StatusBar style='dark' />
 
-      <OnboardingNavHeader padH={padH} onBack={onBack} />
+      <OnboardingNavHeader
+        padH={padH}
+        onBack={onBack}
+        right={
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel='Add sample listing'
+            onPress={addSampleListing}
+            hitSlop={12}
+            style={({ pressed }) => [
+              styles.headerAddBtn,
+              pressed && styles.headerIconBtnPressed,
+            ]}
+          >
+            <LinearGradient
+              colors={gradientPrimaryHorizontal}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={styles.headerAddBtnGrad}
+            >
+              <Ionicons name='add' size={22} color='#FFFFFF' />
+            </LinearGradient>
+          </Pressable>
+        }
+      />
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: space.md,
-            paddingHorizontal: padH,
-            paddingBottom: insets.bottom + 140,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionKicker}>Portfolio</Text>
-          <View style={styles.sectionTitleRow}>
-            <Text style={styles.sectionTitle}>Your listings</Text>
-            <Text style={styles.sectionMeta}>{listings.length} listings</Text>
+      {listings.length === 0 ? (
+        <View
+          style={[
+            styles.emptyMain,
+            {
+              paddingTop: space.md,
+              paddingHorizontal: padH,
+              paddingBottom: insets.bottom + 92,
+            },
+          ]}
+        >
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionTitle}>Your listings</Text>
+              <Text style={styles.sectionMeta}>0 listings</Text>
+            </View>
           </View>
+          <ListingsEmptyState />
         </View>
-
-        <View style={styles.listStack}>
-          {listings.map((listing, index) => (
-            <ListingRow
-              key={listing.id}
-              isBoosted={Boolean(boostedListingIds[listing.id])}
-              isLast={index === listings.length - 1}
-              listing={listing}
-              onOpenRoommates={() => setRoommateListing(listing)}
-              onPressBoost={() => openBoostModal(listing)}
-              onPressDelete={() => openDeleteModal(listing)}
-              onPressEdit={
-                onEditListing ? () => onEditListing(listing.id) : undefined
-              }
-            />
-          ))}
-        </View>
-      </ScrollView>
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: space.md,
+              paddingHorizontal: padH,
+              paddingBottom: insets.bottom + 140,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionTitle}>Your listings</Text>
+              <Text style={styles.sectionMeta}>
+                {listings.length === 1
+                  ? '1 listing'
+                  : `${listings.length} listings`}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.listStack}>
+            {listings.map((listing, index) => (
+              <ListingRow
+                key={listing.id}
+                isBoosted={Boolean(boostedListingIds[listing.id])}
+                isLast={index === listings.length - 1}
+                listing={listing}
+                onOpenRoommates={() => setRoommateListing(listing)}
+                onPressBoost={() => openBoostModal(listing)}
+                onPressDelete={() => openDeleteModal(listing)}
+                onPressEdit={
+                  onEditListing ? () => onEditListing(listing.id) : undefined
+                }
+              />
+            ))}
+          </View>
+        </ScrollView>
+      )}
 
       <View
         pointerEvents='box-none'
@@ -338,6 +395,41 @@ export function YourListingsScreen({
         onClose={closeDeleteModal}
         onConfirmFinal={confirmDeleteFinal}
       />
+    </View>
+  );
+}
+
+function ListingsEmptyState() {
+  return (
+    <View style={styles.emptyWrap}>
+      <View style={styles.emptyCard}>
+        <LinearGradient
+          colors={['#EEF3FF', '#F8FAFF', '#FFFFFF']}
+          locations={[0, 0.55, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.emptyContent}>
+          <View style={styles.emptyIconRing}>
+            <LinearGradient
+              colors={gradientPrimaryHorizontal}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.emptyIconRingGrad}
+            >
+              <View style={styles.emptyIconCore}>
+                <Ionicons name='home' size={30} color={colors.primary} />
+              </View>
+            </LinearGradient>
+          </View>
+          <Text style={styles.emptyTitle}>No listings yet</Text>
+          <Text style={styles.emptyCopy}>
+            Publish your first room or unit to start getting views, leads, and
+            roommate matches on Ellieo.
+          </Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -979,7 +1071,7 @@ function DeleteListingModal({
                   {listing.unit}
                 </Text>
                 {' '}
-                will leave your portfolio and renters will no longer see it.
+                will be removed and renters will no longer see it.
               </Text>
               <Text style={styles.deleteListingSheetHint}>
                 This can&apos;t be undone.
@@ -1271,6 +1363,92 @@ const styles = StyleSheet.create({
   headerIconBtnPressed: {
     opacity: 0.55,
   },
+  headerAddBtn: {
+    borderRadius: radius.pill,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.22,
+        shadowRadius: 8,
+      },
+      android: { elevation: 3 },
+    }),
+  },
+  headerAddBtnGrad: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyMain: {
+    flex: 1,
+    minHeight: 0,
+  },
+  emptyWrap: {
+    flex: 1,
+    marginTop: space.md,
+    minHeight: 0,
+  },
+  emptyCard: {
+    flex: 1,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(47, 109, 246, 0.12)',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 14 },
+        shadowOpacity: 0.08,
+        shadowRadius: 22,
+      },
+      android: { elevation: 3 },
+    }),
+  },
+  emptyContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.sm,
+    paddingHorizontal: space.xl,
+    maxWidth: 340,
+  },
+  emptyIconRing: {
+    marginBottom: space.xs,
+  },
+  emptyIconRingGrad: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    padding: 2.5,
+  },
+  emptyIconCore: {
+    flex: 1,
+    borderRadius: 35,
+    backgroundColor: white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: {
+    fontSize: type.bodyLarge,
+    fontWeight: '800',
+    color: ink,
+    letterSpacing: -0.35,
+    textAlign: 'center',
+  },
+  emptyCopy: {
+    fontSize: type.caption,
+    lineHeight: 20,
+    fontWeight: '500',
+    color: muted,
+    textAlign: 'center',
+    letterSpacing: -0.08,
+    maxWidth: 300,
+    paddingHorizontal: space.sm,
+  },
   sectionHeader: {
     gap: space.xs,
   },
@@ -1291,14 +1469,6 @@ const styles = StyleSheet.create({
       android: { includeFontPadding: false },
       default: {},
     }),
-  },
-  sectionKicker: {
-    fontSize: type.micro,
-    lineHeight: 14,
-    fontWeight: '900',
-    color: colors.primary,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
   },
   sectionTitle: {
     fontSize: type.title,

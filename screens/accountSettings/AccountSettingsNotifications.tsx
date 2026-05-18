@@ -10,6 +10,7 @@ export function AccountSettingsNotifications({ onBack }: { onBack: () => void })
 
   return (
     <SettingsScaffold
+      heroHeader
       title='Notifications'
       subtitle='Manage how and when you receive alerts from Ellieo.'
       onBack={onBack}

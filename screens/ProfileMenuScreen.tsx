@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { AppTopBar, appTopBarStyles } from '../components/AppTopBar';
+import { LogoutConfirmModal } from '../components/LogoutConfirmModal';
 import { ProfileRoommateLookingCard } from '../components/ProfileRoommateLookingCard';
 import { RoommateLookingReviewModal } from '../components/RoommateLookingReviewModal';
 import { colors, radius, space, type } from '../design/theme';
@@ -45,6 +46,9 @@ type ProfileMenuScreenProps = {
   onOpenSavedListings?: () => void;
   onOpenLifestylePreferences?: () => void;
   onOpenAccountSettings?: () => void;
+  onOpenHelp?: () => void;
+  onOpenLegal?: () => void;
+  onLogout?: () => void;
 };
 
 const PROFILE_MENU_ITEMS: ProfileMenuItem[] = [
@@ -85,8 +89,12 @@ export function ProfileMenuScreen({
   onOpenSavedListings,
   onOpenLifestylePreferences,
   onOpenAccountSettings,
+  onOpenHelp,
+  onOpenLegal,
+  onLogout,
 }: ProfileMenuScreenProps) {
   const [affiliationIndex, setAffiliationIndex] = useState(0);
+  const [logoutVisible, setLogoutVisible] = useState(false);
   const affiliation = PROFILE_AFFILIATIONS[affiliationIndex];
 
   return (
@@ -255,6 +263,15 @@ export function ProfileMenuScreen({
               key={item.label}
               accessibilityRole='button'
               accessibilityLabel={item.label}
+              onPress={
+                item.label === 'Get help'
+                  ? onOpenHelp
+                  : item.label === 'Legal'
+                    ? onOpenLegal
+                    : item.label === 'Log out'
+                      ? () => setLogoutVisible(true)
+                      : undefined
+              }
               style={({ pressed }) => [
                 profileStyles.menuRow,
                 index === 2 && profileStyles.menuRowLast,
@@ -281,6 +298,16 @@ export function ProfileMenuScreen({
         bottomInset={insets.bottom}
         onKeep={onRoommateReviewKeep}
         onUpdate={onRoommateReviewUpdate}
+      />
+
+      <LogoutConfirmModal
+        visible={logoutVisible}
+        bottomInset={insets.bottom}
+        onCancel={() => setLogoutVisible(false)}
+        onConfirm={() => {
+          setLogoutVisible(false);
+          onLogout?.();
+        }}
       />
     </View>
   );

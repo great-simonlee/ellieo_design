@@ -11,6 +11,7 @@ export function AccountSettingsPrivacy({ onBack }: { onBack: () => void }) {
 
   return (
     <SettingsScaffold
+      heroHeader
       title='Privacy'
       subtitle='Control how your information is shared within the Ellieo community.'
       onBack={onBack}
