@@ -19,6 +19,8 @@ import { useOnboardingCtaLayout } from '../design/onboardingCtaLayout';
 import { colors, radius, space, type } from '../design/theme';
 import { useAuthLayout } from './auth/useAuthLayout';
 import { MatchScreen } from './MatchScreen';
+import { ChatThreadScreen } from './messages/ChatThreadScreen';
+import { MessagesScreen } from './messages/MessagesScreen';
 import { MatchSetupFlow } from './matchSetup/MatchSetupFlow';
 import { CreateListingScreen } from './CreateListingScreen';
 import { CreateListingUnifiedScreen } from './CreateListingUnifiedScreen';
@@ -254,6 +256,7 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
   const [isSheetExpanded, setIsSheetExpanded] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   const [profileRoute, setProfileRoute] = useState<ProfileRoute>('menu');
+  const [messagesThreadId, setMessagesThreadId] = useState<string | null>(null);
   const [activelyLooking, setActivelyLooking] = useState(true);
   const [roommateReviewVisible, setRoommateReviewVisible] = useState(false);
   const [shouldReviewOnReactivate, setShouldReviewOnReactivate] = useState(false);
@@ -368,7 +371,9 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
 
   const hasListings = ROOMS_COUNT > 0;
   const mapCollapseButtonWidth = primaryButtonWidth * 0.6;
-  const hideTabBar = activeTab === 'match' && !matchSetupComplete;
+  const hideTabBar =
+    (activeTab === 'match' && !matchSetupComplete) ||
+    (activeTab === 'messages' && messagesThreadId != null);
 
   if (profileMenuVisible) {
     if (profileRoute === 'createListing') {
@@ -713,18 +718,21 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
             />
           )}
         </View>
+      ) : messagesThreadId ? (
+        <ChatThreadScreen
+          threadId={messagesThreadId}
+          onBack={() => setMessagesThreadId(null)}
+        />
       ) : (
-        <View
-          style={[
-            styles.tabPlaceholder,
-            { paddingTop: insets.top + space.xxl, paddingHorizontal: padH },
-          ]}
-        >
-          <Text style={styles.tabPlaceholderTitle}>Messages</Text>
-          <Text style={styles.tabPlaceholderMeta}>
-            Layout placeholder — design only.
-          </Text>
-        </View>
+        <MessagesScreen
+          padH={padH}
+          bottomChromeH={tabBarH}
+          onOpenProfile={() => {
+            setProfileRoute('menu');
+            setProfileMenuVisible(true);
+          }}
+          onOpenThread={setMessagesThreadId}
+        />
       )}
 
       {!hideTabBar ? (
@@ -747,6 +755,9 @@ export function MainMapScreen({ onExit }: MainMapScreenProps) {
                 accessibilityLabel={tab.label}
                 accessibilityState={{ selected }}
                 onPress={() => {
+                  if (tab.id !== 'messages') {
+                    setMessagesThreadId(null);
+                  }
                   if (tab.id === 'match') {
                     setActiveTab('match');
                     return;
